@@ -169,7 +169,7 @@ int	main(int argc, char **argv) {
 		fprintf(stderr, "ERR: Cannot open to %s for writing\n", fname);
 		perror("O/S Err:");
 		exit(EXIT_FAILURE);
-	} else if (c_header) {
+	} else if ((c_header)&&(!gen_sintable)&&(!gen_quarterwav)) {
 		char *strp = strdup(fname);
 		int	slen = strlen(fname);
 		if ((slen>2)&&(strp[slen-1] == 'v')&&(strp[slen-2]=='.')) {

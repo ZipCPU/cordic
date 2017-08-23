@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	cordic.h
+// Filename: 	../rtl/sintable.v
 //
 // Project:	A series of CORDIC related projects
 //
-// Purpose:	This .h file notes the default parameter values from
-//		within the generated file.  It is used to communicate
-//	information about the design to the bench testing code.
+// Purpose:	This is a very simple sinewave table lookup approach
+//		approach to generating a sine wave.  It has the lowest latency
+//	among all sinewave generation alternatives.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -37,17 +37,33 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#ifndef	CORDIC_H
-#define	CORDIC_H
-const int	IW = 8;
-const int	OW = 4;
-const int	NEXTRA = 2;
-const int	WW = 10;
-const int	PW = 30;
-const int	NSTAGES = 10;
-const double	GAIN = 1.6467592111398222;
-const bool HAS_RESET = true;
-const bool HAS_AUX   = true;
-#define	HAS_RESET_WIRE
-#define	HAS_AUX_WIRES
-#endif	// CORDIC_H
+`default_nettype	none
+//
+module	sintable(i_clk, i_reset, i_ce, i_aux, i_phase, o_val, o_aux);
+	//
+	parameter	PW =16, // Number of bits in the input phase
+			OW =12; // Number of output bits
+	//
+	input	wire			i_clk, i_reset, i_ce;
+	input	wire	[(PW-1):0]	i_phase;
+	output	reg	[(OW-1):0]	o_val;
+	//
+	input	wire			i_aux;
+	output	reg			o_aux;
+
+	reg	[(OW-1):0]		tbl	[0:((1<<PW)-1)];
+
+	initial	$readmemh("sintable.hex", tbl);
+
+	always @(posedge i_clk)
+		if (i_reset)
+			o_val <= 0;
+		else if (i_ce)
+			o_val <= tbl[i_phase];
+
+	always @(posedge i_clk)
+		if (i_reset)
+			o_aux <= 0;
+		else if (i_ce)
+			o_aux <= i_aux;
+endmodule

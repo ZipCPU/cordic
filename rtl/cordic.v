@@ -45,7 +45,7 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 		o_xval, o_yval, o_aux);
 	localparam	IW= 8,	// The number of bits in our inputs
 			OW= 4,	// The number of output bits to produce
-			NSTAGES=28,
+			NSTAGES=10,
 			XTRA= 2,// Extra bits for internal precision
 			WW=10,	// Our working bit-width
 			PW=30;	// Bits in our phase variables
@@ -167,26 +167,8 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 	assign	cordic_angle[ 7] = 30'h0014_5f15; //   0.447614 deg
 	assign	cordic_angle[ 8] = 30'h000a_2f94; //   0.223811 deg
 	assign	cordic_angle[ 9] = 30'h0005_17cb; //   0.111906 deg
-	assign	cordic_angle[10] = 30'h0002_8be6; //   0.055953 deg
-	assign	cordic_angle[11] = 30'h0001_45f3; //   0.027976 deg
-	assign	cordic_angle[12] = 30'h0000_a2f9; //   0.013988 deg
-	assign	cordic_angle[13] = 30'h0000_517c; //   0.006994 deg
-	assign	cordic_angle[14] = 30'h0000_28be; //   0.003497 deg
-	assign	cordic_angle[15] = 30'h0000_145f; //   0.001749 deg
-	assign	cordic_angle[16] = 30'h0000_0a2f; //   0.000874 deg
-	assign	cordic_angle[17] = 30'h0000_0517; //   0.000437 deg
-	assign	cordic_angle[18] = 30'h0000_028b; //   0.000219 deg
-	assign	cordic_angle[19] = 30'h0000_0145; //   0.000109 deg
-	assign	cordic_angle[20] = 30'h0000_00a2; //   0.000055 deg
-	assign	cordic_angle[21] = 30'h0000_0051; //   0.000027 deg
-	assign	cordic_angle[22] = 30'h0000_0028; //   0.000014 deg
-	assign	cordic_angle[23] = 30'h0000_0014; //   0.000007 deg
-	assign	cordic_angle[24] = 30'h0000_000a; //   0.000003 deg
-	assign	cordic_angle[25] = 30'h0000_0005; //   0.000002 deg
-	assign	cordic_angle[26] = 30'h0000_0002; //   0.000001 deg
-	assign	cordic_angle[27] = 30'h0000_0001; //   0.000000 deg
-	// Gain is 1.646760
-	// You can annihilate this gain by multiplying by 32'h9b74eda8
+	// Gain is 1.646759
+	// You can annihilate this gain by multiplying by 32'h9b74f422
 	// and right shifting by 31 bits.
 
 	genvar	i;
@@ -203,7 +185,7 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 				ph[i+1] <= 0;
 			end else if (i_ce)
 			begin
-				if (cordic_angle[i] == 0)
+				if ((cordic_angle[i] == 0)||(i >= WW))
 				begin // Do nothing but move our outputs
 				// forward one stage, since we have more
 				// stages than valid data
