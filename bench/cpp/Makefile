@@ -33,7 +33,7 @@
 ## Copyright (C) 2017, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
-## modify it under the terms of  the GNU General Public License as published
+## modify it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or (at
 ## your option) any later version.
 ##
@@ -64,12 +64,13 @@ INCS := -I$(VROOT)/include -I$(RTLD) -I$(ROBJD)
 VSRCS:= $(VROOT)/include/verilated.cpp $(VROOT)/include/verilated_vcd_c.cpp
 TBOBJ:= $(ROBJD)/Vcordic__ALL.a
 PLOBJ:= $(ROBJD)/Vtopolar__ALL.a
+CFLAGS:= -g -Og -Wall $(INCS)
 
 cordic_tb:	cordic_tb.cpp $(TBOBJ) $(ROBJD)/Vcordic.h testb.h
-	$(CXX) $(INCS) cordic_tb.cpp $(VSRCS) $(TBOBJ) -o $@
+	$(CXX) $(CFLAGS) cordic_tb.cpp $(VSRCS) $(TBOBJ) -o $@
 
 topolar_tb:	topolar_tb.cpp $(PLOBJ) $(ROBJD)/Vtopolar.h testb.h
-	$(CXX) $(INCS) topolar_tb.cpp $(VSRCS) $(PLOBJ) -o $@
+	$(CXX) $(CFLAGS) topolar_tb.cpp $(VSRCS) $(PLOBJ) -o $@
 
 test:	cordic_tb topolar_tb
 	./cordic_tb
