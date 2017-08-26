@@ -1,0 +1,278 @@
+////////////////////////////////////////////////////////////////////////////////
+//
+// Filename: 	sintable.cpp
+//
+// Project:	A series of CORDIC related projects
+//
+// Purpose:	To define two different table-based sinewave calculators that
+//		can be used within an FPGA.  This routine not only creates a
+//	table based sinewave calculator, but also creates a hex file defining
+//	the values in the table that can be used.
+//
+// Creator:	Dan Gisselquist, Ph.D.
+//		Gisselquist Technology, LLC
+//
+////////////////////////////////////////////////////////////////////////////////
+//
+// Copyright (C) 2017, Gisselquist Technology, LLC
+//
+// This program is free software (firmware): you can redistribute it and/or
+// modify it under the terms of the GNU General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+// for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+// target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
+//
+// License:	GPL, v3, as defined and found on www.gnu.org,
+//		http://www.gnu.org/licenses/gpl.html
+//
+//
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+
+#include "legal.h"
+
+void	sintable(FILE *fp, const char *fname, int lgtable, int ow,
+		bool with_reset, bool with_aux) {
+	FILE	*hexfp;
+	char	*name, *hexfname;
+	const	char	PURPOSE[] =
+	"This is a very simple sinewave table lookup approach\n"
+	"//\t\tapproach to generating a sine wave.  It has the lowest latency\n"
+	"//\tamong all sinewave generation alternatives.";
+
+	if (lgtable >= 24) {
+		fprintf(stderr, "ERR: Requested table size is greater than 16M\n\n");
+		fprintf(stderr, "While this is an arbitrary limit, few FPGA's have this kind of\n");
+		fprintf(stderr, "block RAM.  If you know what you are doing, you can change this\n");
+		fprintf(stderr, "limit up to perhaps 30 without much hassle.  Beyond that, be\n");
+		fprintf(stderr, "aware of integer overflow.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	legal(fp, fname, PROJECT, PURPOSE);
+	fprintf(fp, "`default_nettype\tnone\n//\n");
+	name = modulename(fname);
+
+	fprintf(fp,
+		"module	%s(i_clk, %si_ce, %si_phase, o_val%s);\n"
+		"\t//\n"
+		"\tparameter\tPW =%2d, // Number of bits in the input phase\n"
+		"\t\t\tOW =%2d; // Number of output bits\n"
+		"\t//\n"
+		"\tinput\twire\t\t\ti_clk, %si_ce;\n"
+		"\tinput\twire\t[(PW-1):0]\ti_phase;\n"
+		"\toutput\treg\t[(OW-1):0]\to_val;\n",
+		name,
+		(with_reset) ? "i_reset, ":"",
+		(with_aux)   ? "i_aux, "  :"",
+		(with_aux)   ? ", o_aux"  :"",
+		lgtable, ow,
+		(with_reset) ? "i_reset, ":"");
+	if (with_aux)
+		fprintf(fp,
+			"\t//\n"
+			"\tinput\twire\t\t\ti_aux;\n"
+			"\toutput\treg\t\t\to_aux;\n");
+	fprintf(fp,
+		"\n"
+		"\treg\t[(OW-1):0]\t\ttbl\t[0:((1<<PW)-1)];\n"
+		"\n"
+		"\tinitial\t$readmemh(\"%s.hex\", tbl);\n"
+		"\n"
+		"\talways @(posedge i_clk)\n", name);
+	if (with_reset) {
+		fprintf(fp, "\t\tif (i_reset)\n"
+			"\t\t\to_val <= 0;\n"
+			"\t\telse if (i_ce)\n"
+				"\t\t\to_val <= tbl[i_phase];\n\n");
+	} else {
+		fprintf(fp,
+			"\t\tif (i_ce)\n"
+				"\t\t\to_val <= tbl[i_phase];\n\n");
+	}
+
+	if (with_aux) {
+		if (with_reset) {
+			fprintf(fp, "\talways @(posedge i_clk)\n"
+				"\t\tif (i_reset)\n"
+				"\t\t\to_aux <= 0;\n"
+				"\t\telse if (i_ce)\n"
+				"\t\t\to_aux <= i_aux;\n");
+		} else {
+			fprintf(fp, "\talways @(posedge i_clk)\n"
+				"\t\tif (i_ce)\n"
+				"\t\t\to_aux <= i_aux;\n");
+		}
+	}
+	fprintf(fp, "endmodule\n");
+
+	int slen = strlen(fname);
+	hexfname = new char [strlen(fname)+5];
+	strcpy(hexfname, fname);
+	if ((slen>4)&&(hexfname[slen-2]=='.'))
+		strcat(&hexfname[slen-2], ".hex");
+	else
+		strcat(hexfname, ".hex");
+	hexfp = fopen(hexfname, "w");
+	if (NULL == hexfp) {
+		fprintf(stderr, "ERR: Cannot open %s for writing\n",
+			hexfname);
+	} else {
+		int	tbl_entries = (1<<lgtable),
+			maxv = (1<<(ow-1))-1;
+
+		for(int k=0; k<tbl_entries; k++) {
+			double	dv, ph;
+			ph = 2.0 * M_PI * (double)k / (double)tbl_entries;
+			dv = maxv * sin(ph);
+
+			if (0 == (k%8))
+				fprintf(hexfp, "%s@%08x ", (k!=0)?"\n":"", k);
+			fprintf(hexfp, "%0*x ", (ow+3)/4, (int)(dv) & ((1<<ow)-1));
+		} fprintf(hexfp, "\n");
+	}
+}
+
+void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
+		bool with_reset, bool with_aux) {
+	FILE	*hexfp;
+	char	*name, *hexfname;
+	const	char	PURPOSE[] =
+	"This is a touch more complicated than the simple sinewave table\n"
+	"//\t\tlookup approach to generating a sine wave.  This approach\n"
+	"//\texploits the fact that a sinewave table has symmetry within it,\n"
+	"//\tenough symmetry so as to cut the necessary size of the table\n"
+	"//\tin fourths.  Generating the sinewave value, though, requires\n"
+	"//\ta little more logic to make this possible.";
+
+	assert(lgtable>2);
+	if (lgtable >= 26) {
+		fprintf(stderr, "ERR: Requested table size is greater than 16M\n\n");
+		fprintf(stderr, "While this is an arbitrary limit, few FPGA's have this kind of\n");
+		fprintf(stderr, "block RAM.  If you know what you are doing, you can change this\n");
+		fprintf(stderr, "limit up to perhaps 30 without much hassle.  Beyond that, be\n");
+		fprintf(stderr, "aware of integer overflow.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	legal(fp, fname, PROJECT, PURPOSE);
+	name = modulename(fname);
+
+	fprintf(fp,
+		"module	%s(i_clk, %si_ce, i_phase, %so_val%s);\n"
+		"\t//\n"
+		"\tparameter\tPW =%2d, // Number of bits in the input phase\n"
+		"\t\t\tOW =%2d; // Number of output bits\n"
+		"\t//\n"
+		"\tinput\t\t\t\ti_clk, %si_ce;\n"
+		"\tinput\twire\t[(PW-1):0]\ti_phase;\n"
+		"\toutput\treg\t[(OW-1):0]\to_val;\n",
+		name,
+		(with_reset) ? "i_reset, ":"",
+		(with_aux)   ? "i_aux, ":"",
+		(with_aux)   ? ", o_aux":"",
+		lgtable, ow,
+		(with_reset) ? "i_reset, ":"");
+
+	if (with_aux)
+		fprintf(fp, "\t//\n"
+			"\tinput\twire\t\t\ti_aux;\n"
+			"\toutput\twire\t\t\to_aux;\n");
+
+	fprintf(fp,
+		"\n"
+		"\treg\t[(OW-1):0]\t\tquartertable\t[0:((1<<(PW-2))-1)];\n"
+		"\n"
+		"\tinitial\t$readmemh(\"%s.hex\", quartertable);\n"
+		"\n"
+		"\treg\t[1:0]\tnegate;\n"
+		"\treg\t[(PW-3):0]\tindex;\n"
+		"\treg\t[(OW-1):0]\ttblvalue;\n"
+		"\n"
+		"\talways @(posedge i_clk)\n", name);
+
+	if (with_reset)
+		fprintf(fp, "\t\tif (i_reset)\n"
+			"\t\tbegin\n"
+			"\t\t\tnegate  <= 2\'b00;\n"
+			"\t\t\tindex   <= 0;\n"
+			"\t\t\ttblvalue<= 0;\n"
+			"\t\t\to_val   <= 0;\n"
+			"\t\tend else if (i_ce)\n");
+	else
+		fprintf(fp, "\t\tif (i_ce)\n");
+
+	fprintf(fp,
+		"\t\tbegin\n"
+			"\t\t\t// Clock #1\n"
+			"\t\t\tnegate[0] <= i_phase[(PW-1)];\n"
+			"\t\t\tif (i_phase[(PW-2)])\n"
+			"\t\t\t\tindex <= ~i_phase[(PW-3):0];\n"
+			"\t\t\telse\n"
+			"\t\t\t\tindex <=  i_phase[(PW-3):0];\n"
+			"\n"
+			"\t\t\t// Clock #2\n"
+			"\t\t\ttblvalue <= quartertable[index];\n"
+			"\t\t\tnegate[1] <= negate[0];\n"
+			"\n"
+			"\t\t\t// Output Clock\n"
+			"\t\t\tif (negate[1])\n"
+			"\t\t\t\to_val <= -tblvalue;\n"
+			"\t\t\telse\n"
+			"\t\t\t\to_val <=  tblvalue;\n"
+		"\t\tend\n\n");
+
+	if (with_aux) {
+		fprintf(fp, "\treg [1:0]\taux;\n\talways @(posedge i_clk)\n");
+		if(with_reset)
+			fprintf(fp, "\tif (i_ce)\n\t\t{ o_aux, aux } <= 0;\n"
+				"\telse\n"
+				"\t\t{ o_aux, aux } <= { aux, i_aux };\n");
+		else
+			fprintf(fp, "\t\t{ o_aux, aux } <= { aux, i_aux };\n");
+	}
+
+	fprintf(fp, "endmodule\n");
+
+	int slen = strlen(fname);
+	hexfname = new char [strlen(fname)+5];
+	strcpy(hexfname, fname);
+	if ((slen>4)&&('.' == hexfname[slen-2]))
+		strcpy(&hexfname[slen-2], ".hex");
+	else
+		strcat(hexfname, ".hex");
+	hexfp = fopen(hexfname, "w");
+	if (NULL == hexfp) {
+		fprintf(stderr, "ERR: Cannot open %s for writing\n",
+			hexfname);
+	} else {
+		int	tbl_entries = (1<<lgtable),
+			maxv = (1<<(ow-1))-1;
+
+		for(int k=0; k<tbl_entries; k++) {
+			double	dv, ph;
+			ph = 2.0 * M_PI * (double)k / (double)tbl_entries;
+			ph+=       M_PI             / (double)tbl_entries;
+			dv = maxv * sin(ph);
+
+			if (0 == (k%8))
+				fprintf(hexfp, "%s@%08x ", (k!=0)?"\n":"", k);
+			fprintf(hexfp, "%0*x ", (ow+3)/4, (int)(dv) & ((1<<ow)-1));
+		} fprintf(hexfp, "\n");
+	}
+}
