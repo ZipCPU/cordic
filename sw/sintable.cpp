@@ -268,7 +268,7 @@ void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 			assert(ow < 31);
 		}
 
-		for(int k=0; k<tbl_entries; k++) {
+		for(int k=0; k<tbl_entries/4; k++) {
 			double	dv, ph;
 			ph = 2.0 * M_PI * (double)k / (double)tbl_entries;
 			ph+=       M_PI             / (double)tbl_entries;
