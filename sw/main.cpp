@@ -79,7 +79,7 @@ void	usage(void) {
 }
 
 int	main(int argc, char **argv) {
-	const int	DEFAULT_BITWIDTH = 32;
+	const int	DEFAULT_BITWIDTH = 24;
 	int	nstages = -1, iw=-1, ow=-1, nxtra=2, phase_bits=-1, ww;
 	const char	*fname = NULL;
 	bool	with_reset = true, with_aux = true;

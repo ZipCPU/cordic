@@ -263,6 +263,10 @@ void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 	} else {
 		int	tbl_entries = (1<<lgtable),
 			maxv = (1<<(ow-1))-1;
+		if (ow >= 31) {
+			printf("Internal error: output width too large for internal data types.\n");
+			assert(ow < 31);
+		}
 
 		for(int k=0; k<tbl_entries; k++) {
 			double	dv, ph;
