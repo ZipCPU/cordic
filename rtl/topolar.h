@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	cordic.h
+// Filename: 	topolar.h
 //
 // Project:	A series of CORDIC related projects
 //
@@ -37,17 +37,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#ifndef	CORDIC_H
-#define	CORDIC_H
+#ifndef	TOPOLAR_H
+#define	TOPOLAR_H
 const int	IW = 12;
 const int	OW = 12;
-const int	NEXTRA = 2;
-const int	WW = 14;
-const int	PW = 18;
-const int	NSTAGES = 14;
-const double	GAIN = 1.6467602540312922;
+const int	NEXTRA = 3;
+const int	WW = 18;
+const int	PW = 19;
+const int	NSTAGES = 17;
+const double	GAIN = 1.6467602580571630;
 const bool HAS_RESET = true;
 const bool HAS_AUX   = true;
 #define	HAS_RESET_WIRE
 #define	HAS_AUX_WIRES
-#endif	// CORDIC_H
+#endif	// TOPOLAR_H

@@ -43,12 +43,12 @@
 //
 module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 		o_xval, o_yval, o_aux);
-	localparam	IW= 8,	// The number of bits in our inputs
-			OW= 4,	// The number of output bits to produce
-			NSTAGES=10,
+	localparam	IW=12,	// The number of bits in our inputs
+			OW=12,	// The number of output bits to produce
+			NSTAGES=14,
 			XTRA= 2,// Extra bits for internal precision
-			WW=10,	// Our working bit-width
-			PW=30;	// Bits in our phase variables
+			WW=14,	// Our working bit-width
+			PW=18;	// Bits in our phase variables
 	input					i_clk, i_reset, i_ce;
 	input	wire	signed	[(IW-1):0]		i_xval, i_yval;
 	input	wire		[(PW-1):0]			i_phase;
@@ -102,7 +102,7 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 		begin
 			// Walk through all possible quick phase shifts necessary
 			// to constrain the input to within +/- 45 degrees.
-			case(i_phase[29:27])
+			case(i_phase[17:15])
 			3'b000: begin	// 0 .. 45, No change
 				xv[0] <= e_xval;
 				yv[0] <= e_yval;
@@ -111,32 +111,32 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 			3'b001: begin	// 45 .. 90
 				xv[0] <= -e_yval;
 				yv[0] <= e_xval;
-				ph[0] <= i_phase - 30'h10000000;
+				ph[0] <= i_phase - 18'h10000;
 				end
 			3'b010: begin	// 90 .. 135
 				xv[0] <= -e_yval;
 				yv[0] <= e_xval;
-				ph[0] <= i_phase - 30'h10000000;
+				ph[0] <= i_phase - 18'h10000;
 				end
 			3'b011: begin	// 135 .. 180
 				xv[0] <= -e_xval;
 				yv[0] <= -e_yval;
-				ph[0] <= i_phase - 30'h20000000;
+				ph[0] <= i_phase - 18'h20000;
 				end
 			3'b100: begin	// 180 .. 225
 				xv[0] <= -e_xval;
 				yv[0] <= -e_yval;
-				ph[0] <= i_phase - 30'h20000000;
+				ph[0] <= i_phase - 18'h20000;
 				end
 			3'b101: begin	// 225 .. 270
 				xv[0] <= e_yval;
 				yv[0] <= -e_xval;
-				ph[0] <= i_phase - 30'h30000000;
+				ph[0] <= i_phase - 18'h30000;
 				end
 			3'b110: begin	// 270 .. 315
 				xv[0] <= e_yval;
 				yv[0] <= -e_xval;
-				ph[0] <= i_phase - 30'h30000000;
+				ph[0] <= i_phase - 18'h30000;
 				end
 			3'b111: begin	// 315 .. 360, No change
 				xv[0] <= e_xval;
@@ -155,20 +155,24 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 	// the needs of our problem, specifically the number of stages and
 	// the number of bits required in our phase accumulator
 	//
-	wire	[29:0]	cordic_angle [0:(NSTAGES-1)];
+	wire	[17:0]	cordic_angle [0:(NSTAGES-1)];
 
-	assign	cordic_angle[ 0] = 30'h0800_0000; //  45.000000 deg
-	assign	cordic_angle[ 1] = 30'h04b9_0147; //  26.565051 deg
-	assign	cordic_angle[ 2] = 30'h027e_ce16; //  14.036243 deg
-	assign	cordic_angle[ 3] = 30'h0144_4475; //   7.125016 deg
-	assign	cordic_angle[ 4] = 30'h00a2_c350; //   3.576334 deg
-	assign	cordic_angle[ 5] = 30'h0051_75f8; //   1.789911 deg
-	assign	cordic_angle[ 6] = 30'h0028_bd87; //   0.895174 deg
-	assign	cordic_angle[ 7] = 30'h0014_5f15; //   0.447614 deg
-	assign	cordic_angle[ 8] = 30'h000a_2f94; //   0.223811 deg
-	assign	cordic_angle[ 9] = 30'h0005_17cb; //   0.111906 deg
-	// Gain is 1.646759
-	// You can annihilate this gain by multiplying by 32'h9b74f422
+	assign	cordic_angle[ 0] = 18'h0_8000; //  45.000000 deg
+	assign	cordic_angle[ 1] = 18'h0_4b90; //  26.565051 deg
+	assign	cordic_angle[ 2] = 18'h0_27ec; //  14.036243 deg
+	assign	cordic_angle[ 3] = 18'h0_1444; //   7.125016 deg
+	assign	cordic_angle[ 4] = 18'h0_0a2c; //   3.576334 deg
+	assign	cordic_angle[ 5] = 18'h0_0517; //   1.789911 deg
+	assign	cordic_angle[ 6] = 18'h0_028b; //   0.895174 deg
+	assign	cordic_angle[ 7] = 18'h0_0145; //   0.447614 deg
+	assign	cordic_angle[ 8] = 18'h0_00a2; //   0.223811 deg
+	assign	cordic_angle[ 9] = 18'h0_0051; //   0.111906 deg
+	assign	cordic_angle[10] = 18'h0_0028; //   0.055953 deg
+	assign	cordic_angle[11] = 18'h0_0014; //   0.027976 deg
+	assign	cordic_angle[12] = 18'h0_000a; //   0.013988 deg
+	assign	cordic_angle[13] = 18'h0_0005; //   0.006994 deg
+	// Gain is 1.646760
+	// You can annihilate this gain by multiplying by 32'h9b74edae
 	// and right shifting by 31 bits.
 
 	genvar	i;

@@ -10,7 +10,7 @@
 ## Targets:
 ##
 ##	all:	Builds the cordic generator program, gencordic, and uses it to
-##		build two demonstration files in the rtl/ directory: basiccordic.v
+##		build two demonstration files in the rtl/ directory: cordic.v
 ##		and topolar.v
 ##
 ##	clean:	Cleans up all of the build products, so that you can start
@@ -63,7 +63,7 @@ SOURCES:= main.cpp cordiclib.cpp legal.cpp basiccordic.cpp topolar.cpp \
 	sintable.cpp
 HEADERS:= $(wildcard $(subst .cpp,.h,$(SOURCES)))
 OBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
-VSRC   := topolar.v basiccordic.v sintable.v quarterwav.v
+VSRC   := topolar.v cordic.v sintable.v quarterwav.v
 CFLAGS := -g -Og -Wall
 PROGRAMS:= gencordic
 all: $(PROGRAMS) $(VSRC)
@@ -75,6 +75,10 @@ $(OBJDIR)/%.o: %.cpp
 	$(CXX) $(CFLAGS) -c $< -o $@
 
 gencordic: $(OBJECTS)
+	rm -f $(VSRCD)/topolar.v
+	rm -f $(VSRCD)/cordic.v
+	rm -f $(VSRCD)/sintable.v
+	rm -f $(VSRCD)/quarterwav.v
 	$(CXX) $(OBJECTS) -o $@
 
 .PHONY: topolar topolar.v
@@ -84,13 +88,13 @@ $(VSRCD)/topolar.v: gencordic
 	$(mk-rtldir)
 	./gencordic -f $(VSRCD)/topolar.v -v -i 12 -o 12 -t r2p -x 1 -c
 
-.PHONY: basiccordic basiccordic.v cordic
+.PHONY: basiccordic cordic.v cordic
 basiccordic: $(VSRCD)/cordic.v
 cordic: basiccordic
 cordic.v: basiccordic
-$(VSRCD)/basiccordic.v: gencordic
+$(VSRCD)/cordic.v: gencordic
 	$(mk-rtldir)
-	./gencordic -f $(VSRCD)/cordic.v  -v -i 8 -o 4 -p 30 -t p2r -x 1 -c
+	./gencordic -f $(VSRCD)/cordic.v  -v -i 12 -o 12 -t p2r -x 1 -c
 
 .PHONY: sintable sintable.v
 sintable: $(VSRCD)/sintable.v
@@ -110,7 +114,7 @@ $(VSRCD)/quarterwav.v: gencordic
 clean:
 	rm -f $(PROGRAMS) tags
 	rm -rf $(OBJDIR)/
-	rm -f $(VSRCD)/topolar.v $(VSRCD)/basiccordic.v
+	rm -f $(VSRCD)/topolar.v $(VSRCD)/cordic.v
 	rm -f $(VSRCD)/sintable.v $(VSRCD)/sintable.hex
 	rm -f $(VSRCD)/quarterwav.v $(VSRCD)/quarterwav.hex
 

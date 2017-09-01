@@ -1,12 +1,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	cordic.h
+// Filename: 	topolar.h
 //
 // Project:	A series of CORDIC related projects
 //
-// Purpose:	This .h file notes the default parameter values from
-//		within the generated file.  It is used to communicate
-//	information about the design to the bench testing code.
+// Purpose:	
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -16,7 +14,7 @@
 // Copyright (C) 2017, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -37,17 +35,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#ifndef	CORDIC_H
-#define	CORDIC_H
-const int	IW = 12;
-const int	OW = 12;
-const int	NEXTRA = 2;
-const int	WW = 14;
-const int	PW = 18;
-const int	NSTAGES = 14;
-const double	GAIN = 1.6467602540312922;
-const bool HAS_RESET = true;
-const bool HAS_AUX   = true;
-#define	HAS_RESET_WIRE
-#define	HAS_AUX_WIRES
-#endif	// CORDIC_H
+#ifndef	TOPOLAR_H
+#define	TOPOLAR_H
+
+#include <stdio.h>
+
+extern	void	topolar(FILE *fp, FILE *fhp, const char *fname,
+			int nstages, int iw, int ow, int nxtra,
+			int phase_bits=32,
+			bool with_reset=true, bool with_aux = true);
+
+#endif	// TOPOLAR_H
