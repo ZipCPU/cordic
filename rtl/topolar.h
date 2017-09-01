@@ -44,8 +44,8 @@ const int	OW = 12;
 const int	NEXTRA = 3;
 const int	WW = 18;
 const int	PW = 19;
-const int	NSTAGES = 17;
-const double	GAIN = 1.6467602580571630;
+const int	NSTAGES = 16;
+const double	GAIN = 1.1644353454607288;
 const bool HAS_RESET = true;
 const bool HAS_AUX   = true;
 #define	HAS_RESET_WIRE

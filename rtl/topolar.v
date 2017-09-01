@@ -45,7 +45,7 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 		o_mag, o_phase, o_aux);
 	localparam	IW=12,	// The number of bits in our inputs
 			OW=12,// The number of output bits to produce
-			NSTAGES=17,
+			NSTAGES=16,
 			XTRA= 3,// Extra bits for internal precision
 			WW=18,	// Our working bit-width
 			PW=19;	// Bits in our phase variables
@@ -89,14 +89,15 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 		else if (i_ce)
 			ax <= { ax[(NSTAGES-1):0], i_aux };
 
-	// First stage, map to within 0-90 degrees
+	// First stage, map to within +/- 45 degrees
 	always @(posedge i_clk)
 		if (i_reset)
 		begin
 			xv[0] <= 0;
 			yv[0] <= 0;
 			ph[0] <= 0;
-		end else case({i_xval[IW-1], i_yval[IW-1]})
+		end else if (i_ce)
+		case({i_xval[IW-1], i_yval[IW-1]})
 		2'b01: begin // Rotate by -315 degrees
 			xv[0] <=  e_xval - e_yval;
 			yv[0] <=  e_xval + e_yval;
@@ -130,59 +131,59 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 	//
 	wire	[18:0]	cordic_angle [0:(NSTAGES-1)];
 
-	assign	cordic_angle[ 0] = 19'h1_0000; //  45.000000 deg
-	assign	cordic_angle[ 1] = 19'h0_9720; //  26.565051 deg
-	assign	cordic_angle[ 2] = 19'h0_4fd9; //  14.036243 deg
-	assign	cordic_angle[ 3] = 19'h0_2888; //   7.125016 deg
-	assign	cordic_angle[ 4] = 19'h0_1458; //   3.576334 deg
-	assign	cordic_angle[ 5] = 19'h0_0a2e; //   1.789911 deg
-	assign	cordic_angle[ 6] = 19'h0_0517; //   0.895174 deg
-	assign	cordic_angle[ 7] = 19'h0_028b; //   0.447614 deg
-	assign	cordic_angle[ 8] = 19'h0_0145; //   0.223811 deg
-	assign	cordic_angle[ 9] = 19'h0_00a2; //   0.111906 deg
-	assign	cordic_angle[10] = 19'h0_0051; //   0.055953 deg
-	assign	cordic_angle[11] = 19'h0_0028; //   0.027976 deg
-	assign	cordic_angle[12] = 19'h0_0014; //   0.013988 deg
-	assign	cordic_angle[13] = 19'h0_000a; //   0.006994 deg
-	assign	cordic_angle[14] = 19'h0_0005; //   0.003497 deg
-	assign	cordic_angle[15] = 19'h0_0002; //   0.001749 deg
-	assign	cordic_angle[16] = 19'h0_0001; //   0.000874 deg
-	// Gain is 1.646760
-	// You can annihilate this gain by multiplying by 32'h9b74eda8
+	assign	cordic_angle[ 0] = 19'h0_9720; //  26.565051 deg
+	assign	cordic_angle[ 1] = 19'h0_4fd9; //  14.036243 deg
+	assign	cordic_angle[ 2] = 19'h0_2888; //   7.125016 deg
+	assign	cordic_angle[ 3] = 19'h0_1458; //   3.576334 deg
+	assign	cordic_angle[ 4] = 19'h0_0a2e; //   1.789911 deg
+	assign	cordic_angle[ 5] = 19'h0_0517; //   0.895174 deg
+	assign	cordic_angle[ 6] = 19'h0_028b; //   0.447614 deg
+	assign	cordic_angle[ 7] = 19'h0_0145; //   0.223811 deg
+	assign	cordic_angle[ 8] = 19'h0_00a2; //   0.111906 deg
+	assign	cordic_angle[ 9] = 19'h0_0051; //   0.055953 deg
+	assign	cordic_angle[10] = 19'h0_0028; //   0.027976 deg
+	assign	cordic_angle[11] = 19'h0_0014; //   0.013988 deg
+	assign	cordic_angle[12] = 19'h0_000a; //   0.006994 deg
+	assign	cordic_angle[13] = 19'h0_0005; //   0.003497 deg
+	assign	cordic_angle[14] = 19'h0_0002; //   0.001749 deg
+	assign	cordic_angle[15] = 19'h0_0001; //   0.000874 deg
+	// Gain is 1.164435
+	// You can annihilate this gain by multiplying by 32'hdbd95b16
 	// and right shifting by 31 bits.
 
 	genvar	i;
 	generate for(i=0; i<NSTAGES; i=i+1) begin : TOPOLARloop
 		always @(posedge i_clk)
+		// Here's where we are going to put the actual CORDIC
+		// rectangular to polar loop.  Everything up to this
+		// point has simply been necessary preliminaries.
+		if (i_reset)
 		begin
-			// Here's where we are going to put the actual CORDIC
-			// rectangular to polar loop.  Everything up to this
-			// point has simply been necessary preliminaries.
-			if (i_reset)
+			xv[i+1] <= 0;
+			yv[i+1] <= 0;
+			ph[i+1] <= 0;
+		end else if (i_ce)
+		begin
+			if ((cordic_angle[i] == 0)||(i >= WW))
+			begin // Do nothing but move our vector
+			// forward one stage, since we have more
+			// stages than valid data
+				xv[i+1] <= xv[i];
+				yv[i+1] <= yv[i];
+				ph[i+1] <= ph[i];
+			end else if (yv[i][(WW-1)]) // Below the axis
 			begin
-				xv[i+1] <= 0;
-				yv[i+1] <= 0;
-				ph[i+1] <= 0;
-			end else if (i_ce)
-			begin
-				if ((cordic_angle[i] == 0)||(i >= WW))
-				begin // Do nothing but move our vector
-				// forward one stage, since we have more
-				// stages than valid data
-				end else if (yv[i][(WW-1)]) // Below the axis
-				begin
-					// If the vector is below the x-axis, rotate by
-					// the CORDIC angle in a positive direction.
-					xv[i+1] <= xv[i] - (yv[i]>>>(i));
-					yv[i+1] <= yv[i] + (xv[i]>>>(i));
-					ph[i+1] <= ph[i] - cordic_angle[i];
-				end else begin
-					// On the other hand, if the vector is above the
-					// x-axis, then rotate in the other direction
-					xv[i+1] <= xv[i] + (yv[i]>>>(i));
-					yv[i+1] <= yv[i] - (xv[i]>>>(i));
-					ph[i+1] <= ph[i] + cordic_angle[i];
-				end
+				// If the vector is below the x-axis, rotate by
+				// the CORDIC angle in a positive direction.
+				xv[i+1] <= xv[i] - (yv[i]>>>(i+1));
+				yv[i+1] <= yv[i] + (xv[i]>>>(i+1));
+				ph[i+1] <= ph[i] - cordic_angle[i];
+			end else begin
+				// On the other hand, if the vector is above the
+				// x-axis, then rotate in the other direction
+				xv[i+1] <= xv[i] + (yv[i]>>>(i+1));
+				yv[i+1] <= yv[i] - (xv[i]>>>(i+1));
+				ph[i+1] <= ph[i] + cordic_angle[i];
 			end
 		end
 	end endgenerate
@@ -195,6 +196,7 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 				{(WW-OW-1){!xv[NSTAGES][WW-OW]}}};
 
 	always @(posedge i_clk)
+	if (i_ce)
 	begin
 		o_mag   <= pre_mag[(WW-1):(WW-OW)];
 		o_phase <= ph[NSTAGES];

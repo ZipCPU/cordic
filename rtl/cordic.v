@@ -93,58 +93,58 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 	//	The resulting phase needs to be between -45 and 45
 	//		degrees but in units of normalized phase
 	always @(posedge i_clk)
-		if (i_reset)
-		begin
-			xv[0] <= 0;
-			yv[0] <= 0;
-			ph[0] <= 0;
-		end else if (i_ce)
-		begin
-			// Walk through all possible quick phase shifts necessary
-			// to constrain the input to within +/- 45 degrees.
-			case(i_phase[17:15])
-			3'b000: begin	// 0 .. 45, No change
-				xv[0] <= e_xval;
-				yv[0] <= e_yval;
-				ph[0] <= i_phase;
-				end
-			3'b001: begin	// 45 .. 90
-				xv[0] <= -e_yval;
-				yv[0] <= e_xval;
-				ph[0] <= i_phase - 18'h10000;
-				end
-			3'b010: begin	// 90 .. 135
-				xv[0] <= -e_yval;
-				yv[0] <= e_xval;
-				ph[0] <= i_phase - 18'h10000;
-				end
-			3'b011: begin	// 135 .. 180
-				xv[0] <= -e_xval;
-				yv[0] <= -e_yval;
-				ph[0] <= i_phase - 18'h20000;
-				end
-			3'b100: begin	// 180 .. 225
-				xv[0] <= -e_xval;
-				yv[0] <= -e_yval;
-				ph[0] <= i_phase - 18'h20000;
-				end
-			3'b101: begin	// 225 .. 270
-				xv[0] <= e_yval;
-				yv[0] <= -e_xval;
-				ph[0] <= i_phase - 18'h30000;
-				end
-			3'b110: begin	// 270 .. 315
-				xv[0] <= e_yval;
-				yv[0] <= -e_xval;
-				ph[0] <= i_phase - 18'h30000;
-				end
-			3'b111: begin	// 315 .. 360, No change
-				xv[0] <= e_xval;
-				yv[0] <= e_yval;
-				ph[0] <= i_phase;
-				end
-			endcase
-		end
+	if (i_reset)
+	begin
+		xv[0] <= 0;
+		yv[0] <= 0;
+		ph[0] <= 0;
+	end else if (i_ce)
+	begin
+		// Walk through all possible quick phase shifts necessary
+		// to constrain the input to within +/- 45 degrees.
+		case(i_phase[(PW-1):(PW-3)])
+		3'b000: begin	// 0 .. 45, No change
+			xv[0] <= e_xval;
+			yv[0] <= e_yval;
+			ph[0] <= i_phase;
+			end
+		3'b001: begin	// 45 .. 90
+			xv[0] <= -e_yval;
+			yv[0] <= e_xval;
+			ph[0] <= i_phase - 18'h10000;
+			end
+		3'b010: begin	// 90 .. 135
+			xv[0] <= -e_yval;
+			yv[0] <= e_xval;
+			ph[0] <= i_phase - 18'h10000;
+			end
+		3'b011: begin	// 135 .. 180
+			xv[0] <= -e_xval;
+			yv[0] <= -e_yval;
+			ph[0] <= i_phase - 18'h20000;
+			end
+		3'b100: begin	// 180 .. 225
+			xv[0] <= -e_xval;
+			yv[0] <= -e_yval;
+			ph[0] <= i_phase - 18'h20000;
+			end
+		3'b101: begin	// 225 .. 270
+			xv[0] <= e_yval;
+			yv[0] <= -e_xval;
+			ph[0] <= i_phase - 18'h30000;
+			end
+		3'b110: begin	// 270 .. 315
+			xv[0] <= e_yval;
+			yv[0] <= -e_xval;
+			ph[0] <= i_phase - 18'h30000;
+			end
+		3'b111: begin	// 315 .. 360, No change
+			xv[0] <= e_xval;
+			yv[0] <= e_yval;
+			ph[0] <= i_phase;
+			end
+		endcase
+	end
 
 	//
 	// In many ways, the key to this whole algorithm lies in the angles
@@ -157,59 +157,58 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 	//
 	wire	[17:0]	cordic_angle [0:(NSTAGES-1)];
 
-	assign	cordic_angle[ 0] = 18'h0_8000; //  45.000000 deg
-	assign	cordic_angle[ 1] = 18'h0_4b90; //  26.565051 deg
-	assign	cordic_angle[ 2] = 18'h0_27ec; //  14.036243 deg
-	assign	cordic_angle[ 3] = 18'h0_1444; //   7.125016 deg
-	assign	cordic_angle[ 4] = 18'h0_0a2c; //   3.576334 deg
-	assign	cordic_angle[ 5] = 18'h0_0517; //   1.789911 deg
-	assign	cordic_angle[ 6] = 18'h0_028b; //   0.895174 deg
-	assign	cordic_angle[ 7] = 18'h0_0145; //   0.447614 deg
-	assign	cordic_angle[ 8] = 18'h0_00a2; //   0.223811 deg
-	assign	cordic_angle[ 9] = 18'h0_0051; //   0.111906 deg
-	assign	cordic_angle[10] = 18'h0_0028; //   0.055953 deg
-	assign	cordic_angle[11] = 18'h0_0014; //   0.027976 deg
-	assign	cordic_angle[12] = 18'h0_000a; //   0.013988 deg
-	assign	cordic_angle[13] = 18'h0_0005; //   0.006994 deg
-	// Gain is 1.646760
-	// You can annihilate this gain by multiplying by 32'h9b74edae
+	assign	cordic_angle[ 0] = 18'h0_4b90; //  26.565051 deg
+	assign	cordic_angle[ 1] = 18'h0_27ec; //  14.036243 deg
+	assign	cordic_angle[ 2] = 18'h0_1444; //   7.125016 deg
+	assign	cordic_angle[ 3] = 18'h0_0a2c; //   3.576334 deg
+	assign	cordic_angle[ 4] = 18'h0_0517; //   1.789911 deg
+	assign	cordic_angle[ 5] = 18'h0_028b; //   0.895174 deg
+	assign	cordic_angle[ 6] = 18'h0_0145; //   0.447614 deg
+	assign	cordic_angle[ 7] = 18'h0_00a2; //   0.223811 deg
+	assign	cordic_angle[ 8] = 18'h0_0051; //   0.111906 deg
+	assign	cordic_angle[ 9] = 18'h0_0028; //   0.055953 deg
+	assign	cordic_angle[10] = 18'h0_0014; //   0.027976 deg
+	assign	cordic_angle[11] = 18'h0_000a; //   0.013988 deg
+	assign	cordic_angle[12] = 18'h0_0005; //   0.006994 deg
+	assign	cordic_angle[13] = 18'h0_0002; //   0.003497 deg
+	// Gain is 1.164435
+	// You can annihilate this gain by multiplying by 32'hdbd95b18
 	// and right shifting by 31 bits.
 
 	genvar	i;
 	generate for(i=0; i<NSTAGES; i=i+1) begin : CORDICops
 		always @(posedge i_clk)
+		// Here's where we are going to put the actual CORDIC
+		// we've been studying and discussing.  Everything up to
+		// this point has simply been necessary preliminaries.
+		if (i_reset)
 		begin
-			// Here's where we are going to put the actual CORDIC
-			// we've been studying and discussing.  Everything up to
-			// this point has simply been necessary preliminaries.
-			if (i_reset)
+			xv[i+1] <= 0;
+			yv[i+1] <= 0;
+			ph[i+1] <= 0;
+		end else if (i_ce)
+		begin
+			if ((cordic_angle[i] == 0)||(i >= WW))
+			begin // Do nothing but move our outputs
+			// forward one stage, since we have more
+			// stages than valid data
+				xv[i+1] <= xv[i];
+				yv[i+1] <= yv[i];
+				ph[i+1] <= ph[i];
+			end else if (ph[i][(PW-1)]) // Negative phase
 			begin
-				xv[i+1] <= 0;
-				yv[i+1] <= 0;
-				ph[i+1] <= 0;
-			end else if (i_ce)
-			begin
-				if ((cordic_angle[i] == 0)||(i >= WW))
-				begin // Do nothing but move our outputs
-				// forward one stage, since we have more
-				// stages than valid data
-					xv[i+1] <= xv[i];
-					yv[i+1] <= yv[i];
-					ph[i+1] <= ph[i];
-				end else if (ph[i][(PW-1)]) // Negative phase
-				begin
-					// If the phase is negative, rotate by the
-					// CORDIC angle in a positive direction.
-					xv[i+1] <= xv[i] + (yv[i]>>>(i));
-					yv[i+1] <= yv[i] - (xv[i]>>>(i));
-					ph[i+1] <= ph[i] + cordic_angle[i];
-				end else begin
-					// On the other hand, if the phase is
-					// positive ... rotate in the other direction
-					xv[i+1] <= xv[i] - (yv[i]>>>(i));
-					yv[i+1] <= yv[i] + (xv[i]>>>(i));
-					ph[i+1] <= ph[i] - cordic_angle[i];
-				end
+				// If the phase is negative, rotate by the
+				// CORDIC angle in a clockwise direction.
+				xv[i+1] <= xv[i] + (yv[i]>>>(i+1));
+				yv[i+1] <= yv[i] - (xv[i]>>>(i+1));
+				ph[i+1] <= ph[i] + cordic_angle[i];
+			end else begin
+				// On the other hand, if the phase is
+				// positive ... rotate in the
+				// counter-clockwise direction
+				xv[i+1] <= xv[i] - (yv[i]>>>(i+1));
+				yv[i+1] <= yv[i] + (xv[i]>>>(i+1));
+				ph[i+1] <= ph[i] - cordic_angle[i];
 			end
 		end
 	end endgenerate

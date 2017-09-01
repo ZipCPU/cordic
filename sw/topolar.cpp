@@ -151,7 +151,7 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 "\n");
 
 	fprintf(fp,
-		"\t// First stage, map to within 0-90 degrees\n"
+		"\t// First stage, map to within +/- 45 degrees\n"
 		"\talways @(posedge i_clk)\n");
 	if (with_reset)
 		fprintf(fp,
@@ -160,9 +160,9 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 			"\t\t\txv[0] <= 0;\n"
 			"\t\t\tyv[0] <= 0;\n"
 			"\t\t\tph[0] <= 0;\n"
-			"\t\tend else ");
+			"\t\tend else if (i_ce)\n\t\t");
 	else
-		fprintf(fp, "\t\t");
+		fprintf(fp, "\t\tif (i_ce)\n\t\t");
 
 	fprintf(fp,
 		"case({i_xval[IW-1], i_yval[IW-1]})\n");
@@ -204,43 +204,45 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 
 	fprintf(fp,"\n"
 		"\tgenvar\ti;\n"
-		"\tgenerate for(i=0; i<NSTAGES; i=i+1) begin : TOPOLARloop\n"
+		"\tgenerate for(i=0; i<NSTAGES; i=i+1) begin : TOPOLARloop\n");
+	fprintf(fp,
 		"\t\talways @(posedge i_clk)\n"
-		"\t\tbegin\n"
-		"\t\t\t// Here\'s where we are going to put the actual CORDIC\n"
-		"\t\t\t// rectangular to polar loop.  Everything up to this\n"
-		"\t\t\t// point has simply been necessary preliminaries.\n");
+		"\t\t// Here\'s where we are going to put the actual CORDIC\n"
+		"\t\t// rectangular to polar loop.  Everything up to this\n"
+		"\t\t// point has simply been necessary preliminaries.\n");
 	if (with_reset) {
-		fprintf(fp, "\t\t\tif (i_reset)\n"
-			"\t\t\tbegin\n"
-			"\t\t\t\txv[i+1] <= 0;\n"
-			"\t\t\t\tyv[i+1] <= 0;\n"
-			"\t\t\t\tph[i+1] <= 0;\n"
-			"\t\t\tend else if (i_ce)\n");
+		fprintf(fp, "\t\tif (i_reset)\n"
+			"\t\tbegin\n"
+			"\t\t\txv[i+1] <= 0;\n"
+			"\t\t\tyv[i+1] <= 0;\n"
+			"\t\t\tph[i+1] <= 0;\n"
+			"\t\tend else if (i_ce)\n");
 	} else
 		fprintf(fp,
-			"\t\t\tif (i_ce)\n");
+			"\t\tif (i_ce)\n");
 
 	fprintf(fp,
+		"\t\tbegin\n"
+		"\t\t\tif ((cordic_angle[i] == 0)||(i >= WW))\n"
+		"\t\t\tbegin // Do nothing but move our vector\n"
+		"\t\t\t// forward one stage, since we have more\n"
+		"\t\t\t// stages than valid data\n"
+		"\t\t\t\txv[i+1] <= xv[i];\n"
+		"\t\t\t\tyv[i+1] <= yv[i];\n"
+		"\t\t\t\tph[i+1] <= ph[i];\n"
+		"\t\t\tend else if (yv[i][(WW-1)]) // Below the axis\n"
 		"\t\t\tbegin\n"
-		"\t\t\t\tif ((cordic_angle[i] == 0)||(i >= WW))\n"
-		"\t\t\t\tbegin // Do nothing but move our vector\n"
-		"\t\t\t\t// forward one stage, since we have more\n"
-		"\t\t\t\t// stages than valid data\n"
-		"\t\t\t\tend else if (yv[i][(WW-1)]) // Below the axis\n"
-		"\t\t\t\tbegin\n"
-		"\t\t\t\t\t// If the vector is below the x-axis, rotate by\n"
-		"\t\t\t\t\t// the CORDIC angle in a positive direction.\n"
-		"\t\t\t\t\txv[i+1] <= xv[i] - (yv[i]>>>(i));\n"
-		"\t\t\t\t\tyv[i+1] <= yv[i] + (xv[i]>>>(i));\n"
-		"\t\t\t\t\tph[i+1] <= ph[i] - cordic_angle[i];\n"
-		"\t\t\t\tend else begin\n"
-		"\t\t\t\t\t// On the other hand, if the vector is above the\n"
-		"\t\t\t\t\t// x-axis, then rotate in the other direction\n"
-		"\t\t\t\t\txv[i+1] <= xv[i] + (yv[i]>>>(i));\n"
-		"\t\t\t\t\tyv[i+1] <= yv[i] - (xv[i]>>>(i));\n"
-		"\t\t\t\t\tph[i+1] <= ph[i] + cordic_angle[i];\n"
-		"\t\t\t\tend\n"
+		"\t\t\t\t// If the vector is below the x-axis, rotate by\n"
+		"\t\t\t\t// the CORDIC angle in a positive direction.\n"
+		"\t\t\t\txv[i+1] <= xv[i] - (yv[i]>>>(i+1));\n"
+		"\t\t\t\tyv[i+1] <= yv[i] + (xv[i]>>>(i+1));\n"
+		"\t\t\t\tph[i+1] <= ph[i] - cordic_angle[i];\n"
+		"\t\t\tend else begin\n"
+		"\t\t\t\t// On the other hand, if the vector is above the\n"
+		"\t\t\t\t// x-axis, then rotate in the other direction\n"
+		"\t\t\t\txv[i+1] <= xv[i] + (yv[i]>>>(i+1));\n"
+		"\t\t\t\tyv[i+1] <= yv[i] - (xv[i]>>>(i+1));\n"
+		"\t\t\t\tph[i+1] <= ph[i] + cordic_angle[i];\n"
 		"\t\t\tend\n"
 		"\t\tend\n"
 		"\tend endgenerate\n\n");
@@ -255,6 +257,7 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 			"\n");
 		fprintf(fp,
 			"\talways @(posedge i_clk)\n"
+			"\tif (i_ce)\n"
 			"\tbegin\n"
 			"\t\to_mag   <= pre_mag[(WW-1):(WW-OW)];\n"
 			"\t\to_phase <= ph[NSTAGES];\n");
@@ -272,6 +275,7 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 	} else {
 		fprintf(fp,
 			"\talways @(posedge i_clk)\n"
+			"\tif (i_ce)\n"
 			"\tbegin\t// We accumulate a bit during our processing, so shift by one\n"
 			"\t\to_mag   <= xv[NSTAGES][(WW-1):(WW-OW)];\n"
 			"\t\to_phase <= ph[NSTAGES];\n");

@@ -150,89 +150,88 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		"\t// First stage, get rid of all but 45 degrees\n"
 		"\t//\tThe resulting phase needs to be between -45 and 45\n"
 		"\t//\t\tdegrees but in units of normalized phase\n"
-		"\talways @(posedge i_clk)\n");
+		"\talways @(posedge i_clk)\n\t");
 
 	if (with_reset)
 		fprintf(fp,
-			"\t\tif (i_reset)\n"
-			"\t\tbegin\n"
-			"\t\t\txv[0] <= 0;\n"
-			"\t\t\tyv[0] <= 0;\n"
-			"\t\t\tph[0] <= 0;\n"
-			"\t\tend else ");
+			"if (i_reset)\n"
+			"\tbegin\n"
+			"\t\txv[0] <= 0;\n"
+			"\t\tyv[0] <= 0;\n"
+			"\t\tph[0] <= 0;\n"
+			"\tend else ");
 
 	fprintf(fp, "if (i_ce)\n"
-		"\t\tbegin\n"
-		"\t\t\t// Walk through all possible quick phase shifts necessary\n"
-		"\t\t\t// to constrain the input to within +/- 45 degrees.\n"
-		"\t\t\tcase(i_phase[%d:%d])\n",
-		phase_bits-1, phase_bits-3);
+		"\tbegin\n"
+		"\t\t// Walk through all possible quick phase shifts necessary\n"
+		"\t\t// to constrain the input to within +/- 45 degrees.\n"
+		"\t\tcase(i_phase[(PW-1):(PW-3)])\n");
 
 	fprintf(fp,
-		"\t\t\t3'b000: begin	// 0 .. 45, No change\n"
-		"\t\t\t	xv[0] <= e_xval;\n"
-		"\t\t\t	yv[0] <= e_yval;\n"
-		"\t\t\t	ph[0] <= i_phase;\n"
-		"\t\t\t	end\n");
+		"\t\t3'b000: begin	// 0 .. 45, No change\n"
+		"\t\t\txv[0] <= e_xval;\n"
+		"\t\t\tyv[0] <= e_yval;\n"
+		"\t\t\tph[0] <= i_phase;\n"
+		"\t\t\tend\n");
 
 	fprintf(fp,
-		"\t\t\t3'b001: begin	// 45 .. 90\n"
-		"\t\t\t	xv[0] <= -e_yval;\n"
-		"\t\t\t	yv[0] <= e_xval;\n"
-		"\t\t\t	ph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\t	end\n",
+		"\t\t3'b001: begin	// 45 .. 90\n"
+		"\t\t\txv[0] <= -e_yval;\n"
+		"\t\t\tyv[0] <= e_xval;\n"
+		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
+		"\t\t\tend\n",
 			phase_bits, (1ul << (phase_bits-2)));
 
 	fprintf(fp,
-		"\t\t\t3'b010: begin	// 90 .. 135\n"
-		"\t\t\t	xv[0] <= -e_yval;\n"
-		"\t\t\t	yv[0] <= e_xval;\n"
-		"\t\t\t	ph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\t	end\n",
+		"\t\t3'b010: begin	// 90 .. 135\n"
+		"\t\t\txv[0] <= -e_yval;\n"
+		"\t\t\tyv[0] <= e_xval;\n"
+		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
+		"\t\t\tend\n",
 			phase_bits, (1ul << (phase_bits-2)));
 
 	fprintf(fp,
-		"\t\t\t3'b011: begin	// 135 .. 180\n"
-		"\t\t\t	xv[0] <= -e_xval;\n"
-		"\t\t\t	yv[0] <= -e_yval;\n"
-		"\t\t\t	ph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\t	end\n",
+		"\t\t3'b011: begin	// 135 .. 180\n"
+		"\t\t\txv[0] <= -e_xval;\n"
+		"\t\t\tyv[0] <= -e_yval;\n"
+		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
+		"\t\t\tend\n",
 			phase_bits, (2ul << (phase_bits-2)));
 
 	fprintf(fp,
-		"\t\t\t3'b100: begin	// 180 .. 225\n"
-		"\t\t\t	xv[0] <= -e_xval;\n"
-		"\t\t\t	yv[0] <= -e_yval;\n"
-		"\t\t\t	ph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\t	end\n",
+		"\t\t3'b100: begin	// 180 .. 225\n"
+		"\t\t\txv[0] <= -e_xval;\n"
+		"\t\t\tyv[0] <= -e_yval;\n"
+		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
+		"\t\t\tend\n",
 			phase_bits, (2ul << (phase_bits-2)));
 
 	fprintf(fp,
-		"\t\t\t3'b101: begin	// 225 .. 270\n"
-		"\t\t\t	xv[0] <= e_yval;\n"
-		"\t\t\t	yv[0] <= -e_xval;\n"
-		"\t\t\t	ph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\t	end\n",
+		"\t\t3'b101: begin	// 225 .. 270\n"
+		"\t\t\txv[0] <= e_yval;\n"
+		"\t\t\tyv[0] <= -e_xval;\n"
+		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
+		"\t\t\tend\n",
 		phase_bits, (3ul << (phase_bits-2)));
 
 	fprintf(fp,
-		"\t\t\t3'b110: begin	// 270 .. 315\n"
-		"\t\t\t	xv[0] <= e_yval;\n"
-		"\t\t\t	yv[0] <= -e_xval;\n"
-		"\t\t\t	ph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\t	end\n",
+		"\t\t3'b110: begin	// 270 .. 315\n"
+		"\t\t\txv[0] <= e_yval;\n"
+		"\t\t\tyv[0] <= -e_xval;\n"
+		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
+		"\t\t\tend\n",
 		phase_bits, (3ul << (phase_bits-2)));
 
 	fprintf(fp,
-		"\t\t\t3'b111: begin	// 315 .. 360, No change\n"
-		"\t\t\t	xv[0] <= e_xval;\n"
-		"\t\t\t	yv[0] <= e_yval;\n"
-		"\t\t\t	ph[0] <= i_phase;\n"
-		"\t\t\t	end\n");
+		"\t\t3'b111: begin	// 315 .. 360, No change\n"
+		"\t\t\txv[0] <= e_xval;\n"
+		"\t\t\tyv[0] <= e_yval;\n"
+		"\t\t\tph[0] <= i_phase;\n"
+		"\t\t\tend\n");
 
 	fprintf(fp,
-		"\t\t\tendcase\n"
-		"\t\tend\n"
+		"\t\tendcase\n"
+		"\tend\n"
 		"\n");
 
 	cordic_angles(fp, nstages, phase_bits);
@@ -241,44 +240,43 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		"\tgenvar	i;\n"
 		"\tgenerate for(i=0; i<NSTAGES; i=i+1) begin : CORDICops\n"
 		"\t\talways @(posedge i_clk)\n"
-		"\t\tbegin\n"
-		"\t\t\t// Here\'s where we are going to put the actual CORDIC\n"
-		"\t\t\t// we\'ve been studying and discussing.  Everything up to\n"
-		"\t\t\t// this point has simply been necessary preliminaries.\n");
+		"\t\t// Here\'s where we are going to put the actual CORDIC\n"
+		"\t\t// we\'ve been studying and discussing.  Everything up to\n"
+		"\t\t// this point has simply been necessary preliminaries.\n");
 	if (with_reset) {
-		fprintf(fp, "\t\t\tif (i_reset)\n"
-			"\t\t\tbegin\n"
-			"\t\t\t\txv[i+1] <= 0;\n"
-			"\t\t\t\tyv[i+1] <= 0;\n"
-			"\t\t\t\tph[i+1] <= 0;\n"
-			"\t\t\tend else if (i_ce)\n");
+		fprintf(fp, "\t\tif (i_reset)\n"
+			"\t\tbegin\n"
+			"\t\t\txv[i+1] <= 0;\n"
+			"\t\t\tyv[i+1] <= 0;\n"
+			"\t\t\tph[i+1] <= 0;\n"
+			"\t\tend else if (i_ce)\n");
 	} else
 		fprintf(fp,
-			"\t\t\tif (i_ce)\n");
+			"\t\tif (i_ce)\n");
 
 	fprintf(fp,
+		"\t\tbegin\n"
+		"\t\t\tif ((cordic_angle[i] == 0)||(i >= WW))\n"
+		"\t\t\tbegin // Do nothing but move our outputs\n"
+		"\t\t\t// forward one stage, since we have more\n"
+		"\t\t\t// stages than valid data\n"
+		"\t\t\t\txv[i+1] <= xv[i];\n"
+		"\t\t\t\tyv[i+1] <= yv[i];\n"
+		"\t\t\t\tph[i+1] <= ph[i];\n"
+		"\t\t\tend else if (ph[i][(PW-1)]) // Negative phase\n"
 		"\t\t\tbegin\n"
-		"\t\t\t\tif ((cordic_angle[i] == 0)||(i >= WW))\n"
-		"\t\t\t\tbegin // Do nothing but move our outputs\n"
-		"\t\t\t\t// forward one stage, since we have more\n"
-		"\t\t\t\t// stages than valid data\n"
-		"\t\t\t\t\txv[i+1] <= xv[i];\n"
-		"\t\t\t\t\tyv[i+1] <= yv[i];\n"
-		"\t\t\t\t\tph[i+1] <= ph[i];\n"
-		"\t\t\t\tend else if (ph[i][(PW-1)]) // Negative phase\n"
-		"\t\t\t\tbegin\n"
-		"\t\t\t\t\t// If the phase is negative, rotate by the\n"
-		"\t\t\t\t\t// CORDIC angle in a positive direction.\n"
-		"\t\t\t\t\txv[i+1] <= xv[i] + (yv[i]>>>(i));\n"
-		"\t\t\t\t\tyv[i+1] <= yv[i] - (xv[i]>>>(i));\n"
-		"\t\t\t\t\tph[i+1] <= ph[i] + cordic_angle[i];\n"
-		"\t\t\t\tend else begin\n"
-		"\t\t\t\t\t// On the other hand, if the phase is\n"
-		"\t\t\t\t\t// positive ... rotate in the other direction\n"
-		"\t\t\t\t\txv[i+1] <= xv[i] - (yv[i]>>>(i));\n"
-		"\t\t\t\t\tyv[i+1] <= yv[i] + (xv[i]>>>(i));\n"
-		"\t\t\t\t\tph[i+1] <= ph[i] - cordic_angle[i];\n"
-		"\t\t\t\tend\n"
+		"\t\t\t\t// If the phase is negative, rotate by the\n"
+		"\t\t\t\t// CORDIC angle in a clockwise direction.\n"
+		"\t\t\t\txv[i+1] <= xv[i] + (yv[i]>>>(i+1));\n"
+		"\t\t\t\tyv[i+1] <= yv[i] - (xv[i]>>>(i+1));\n"
+		"\t\t\t\tph[i+1] <= ph[i] + cordic_angle[i];\n"
+		"\t\t\tend else begin\n"
+		"\t\t\t\t// On the other hand, if the phase is\n"
+		"\t\t\t\t// positive ... rotate in the\n"
+		"\t\t\t\t// counter-clockwise direction\n"
+		"\t\t\t\txv[i+1] <= xv[i] - (yv[i]>>>(i+1));\n"
+		"\t\t\t\tyv[i+1] <= yv[i] + (xv[i]>>>(i+1));\n"
+		"\t\t\t\tph[i+1] <= ph[i] - cordic_angle[i];\n"
 		"\t\t\tend\n"
 		"\t\tend\n"
 		"\tend endgenerate\n\n");

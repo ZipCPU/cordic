@@ -48,7 +48,7 @@ double	cordic_gain(int nstages, int phase_bits) {
 	for(int k=0; k<nstages; k++) {
 		double		dgain;
 
-		dgain = 1.0 + pow(2.0,-2.*(k));
+		dgain = 1.0 + pow(2.0,-2.*(k+1));
 		dgain = sqrt(dgain);
 		gain = gain * dgain;
 	}
@@ -76,7 +76,7 @@ void	cordic_angles(FILE *fp, int nstages, int phase_bits) {
 		double		x, deg;
 		unsigned	phase_value;
 
-		x = atan2(1., pow(2,k));
+		x = atan2(1., pow(2,k+1));
 		deg = x * 180.0 / M_PI;
 		x *= (4.0 * (1ul<<(phase_bits-2))) / (M_PI * 2.0);
 		phase_value = (unsigned)x;
@@ -109,7 +109,7 @@ int	calc_stages(const int working_width, const int phase_bits) {
 		double		x;
 		unsigned long	phase_value;
 
-		x = atan2(1., pow(2,nstages));
+		x = atan2(1., pow(2,nstages+1));
 		x *= (4.0 * (1ul<<(phase_bits-2))) / (M_PI * 2.0);
 		phase_value = (unsigned)x;
 		if (phase_value == 0l)
@@ -126,7 +126,7 @@ int	calc_stages(const int phase_bits) {
 		double		x;
 		unsigned long	phase_value;
 
-		x = atan2(1., pow(2,nstages));
+		x = atan2(1., pow(2,nstages+1));
 		x *= (4.0 * (1ul<<(phase_bits-2))) / (M_PI * 2.0);
 		phase_value = (unsigned)x;
 		if (phase_value == 0l)
@@ -136,6 +136,9 @@ int	calc_stages(const int phase_bits) {
 
 int	calc_phase_bits(const int output_width) {
 	// The number of phase bits required needs to be such that
+	// the sine of the minimum phase must produce less than a sample
+	// of value.  Further bits won't mean much in reality.
+	//
 	// sin(2*pi/(2^phase_bits))*(2^(output_width-1)-1) < 1/2
 	unsigned	phase_bits;
 
