@@ -125,7 +125,7 @@ void	sintable(FILE *fp, const char *fname, int lgtable, int ow,
 	hexfname = new char [strlen(fname)+5];
 	strcpy(hexfname, fname);
 	if ((slen>4)&&(hexfname[slen-2]=='.'))
-		strcat(&hexfname[slen-2], ".hex");
+		strcpy(&hexfname[slen-2], ".hex");
 	else
 		strcat(hexfname, ".hex");
 	hexfp = fopen(hexfname, "w");
