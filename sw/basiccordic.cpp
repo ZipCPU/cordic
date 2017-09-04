@@ -344,8 +344,32 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		fprintf(fhp, "const int	WW = %d;\n", working_width);
 		fprintf(fhp, "const int	PW = %d;\n", phase_bits);
 		fprintf(fhp, "const int	NSTAGES = %d;\n", nstages);
+		fprintf(fhp, "const double	QUANTIZATION_VARIANCE = %.16f; // (Units^2)\n",
+			transform_quantization_variance(nstages,
+				working_width-ow));
+		fprintf(fhp, "const double	PHASE_VARIANCE_RAD = %.16f; // (Radians^2)\n",
+			cordic_variance(nstages, phase_bits));
 		fprintf(fhp, "const double	GAIN = %.16f;\n",
 			cordic_gain(nstages, phase_bits));
+		{
+			double	signal_energy = (1ul<<(iw-1))-1., noise_energy;
+			signal_energy *= (1ul<<((working_width-iw)));
+			signal_energy *= signal_energy;
+
+			noise_energy = (1ul<<(working_width-iw)) * 1./12.;
+			noise_energy *= noise_energy;
+			noise_energy += transform_quantization_variance(nstages,
+				0);
+
+			noise_energy += 1./12.
+				* (1ul<<(working_width-ow))
+				* (1ul<<(working_width-ow));
+			//noise_energy = noise_energy / (1ul<<(working_width-ow));
+
+			fprintf(fhp, "const double\tBEST_POSSIBLE_SNR = %.2f;\n",
+				10.0 * log(signal_energy / noise_energy)
+					/log(10.0));
+		}
 		fprintf(fhp, "const bool HAS_RESET = %s;\n", with_reset?"true":"false");
 		fprintf(fhp, "const bool HAS_AUX   = %s;\n", with_aux?"true":"false");
 		if (with_reset)

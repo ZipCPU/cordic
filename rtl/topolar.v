@@ -147,9 +147,11 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 	assign	cordic_angle[13] = 19'h0_0005; //   0.003497 deg
 	assign	cordic_angle[14] = 19'h0_0002; //   0.001749 deg
 	assign	cordic_angle[15] = 19'h0_0001; //   0.000874 deg
+	// Std-Dev    : 0.00 (Units)
+	// Phase Quantization: 0.000030 (Radians)
 	// Gain is 1.164435
 	// You can annihilate this gain by multiplying by 32'hdbd95b16
-	// and right shifting by 31 bits.
+	// and right shifting by 32 bits.
 
 	genvar	i;
 	generate for(i=0; i<NSTAGES; i=i+1) begin : TOPOLARloop

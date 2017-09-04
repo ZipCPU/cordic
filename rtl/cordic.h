@@ -41,11 +41,14 @@
 #define	CORDIC_H
 const int	IW = 12;
 const int	OW = 12;
-const int	NEXTRA = 2;
-const int	WW = 14;
-const int	PW = 18;
-const int	NSTAGES = 14;
-const double	GAIN = 1.1644353447829383;
+const int	NEXTRA = 3;
+const int	WW = 15;
+const int	PW = 19;
+const int	NSTAGES = 15;
+const double	QUANTIZATION_VARIANCE = 0.3229166666666666; // (Units^2)
+const double	PHASE_VARIANCE_RAD = 0.0000000008651604; // (Radians^2)
+const double	GAIN = 1.1644353453251708;
+const double	BEST_POSSIBLE_SNR = 72.26;
 const bool HAS_RESET = true;
 const bool HAS_AUX   = true;
 #define	HAS_RESET_WIRE

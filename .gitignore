@@ -21,3 +21,4 @@ cpudefs.h
 design.h
 octave-workspace
 core
+*.32t

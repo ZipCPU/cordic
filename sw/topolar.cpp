@@ -305,7 +305,11 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 		fprintf(fhp, "const int	WW = %d;\n", working_width);
 		fprintf(fhp, "const int	PW = %d;\n", phase_bits);
 		fprintf(fhp, "const int	NSTAGES = %d;\n", nstages);
-		fprintf(fhp, "const double	GAIN = %.16f;\n",
+		fprintf(fhp, "const double\tQUANTIZATION_VARIANCE = %.16f; // (Units^2)\n",
+			transform_quantization_variance(nstages, working_width-ow));
+		fprintf(fhp, "const double\tPHASE_VARIANCE_RAD = %.16f; // (Radians^2)\n",
+			cordic_variance(nstages, phase_bits));
+		fprintf(fhp, "const double\tGAIN = %.16f;\n",
 			cordic_gain(nstages, phase_bits));
 		fprintf(fhp, "const bool HAS_RESET = %s;\n", with_reset?"true":"false");
 		fprintf(fhp, "const bool HAS_AUX   = %s;\n", with_aux?"true":"false");

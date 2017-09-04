@@ -56,6 +56,41 @@ double	cordic_gain(int nstages, int phase_bits) {
 	return gain;
 }
 
+double	cordic_variance(int nstages, int phase_bits) {
+	double	variance = 0.0;
+
+	for(unsigned k=0; k<(unsigned)nstages; k++) {
+		double		x, err, scale;
+		unsigned long	phase_value;
+
+		x = atan2(1., pow(2,k+1));
+		scale = (4.0 * (1ul<<(phase_bits-2))) / (M_PI * 2.0);
+		x *= scale;
+		phase_value = (unsigned)x;
+		err = phase_value - x;
+		// Convert the error back to radians
+		err /= scale;
+		// Square it to turn it into a variance.
+		err *= err;
+		// Accumulate it with the rest of the variance(s)
+		// from the cordic angles
+		variance += err;
+	} return variance;
+}
+
+double	transform_quantization_variance(int nstages, int dropped_bits) {
+	// integral _0 ^1 x^2 dx = x^3/3 = 1/3
+	//	* number of stages
+	//	* 2 (x + y)
+	double	stage_variance, drop_scale;
+
+	stage_variance = (2.0 * nstages / 3.0);
+	drop_scale = 1.0 / ((double)(1ul<<dropped_bits));
+	stage_variance *= (drop_scale * drop_scale);
+
+	return stage_variance + (2./12.);
+}
+
 void	cordic_angles(FILE *fp, int nstages, int phase_bits) {
 	fprintf(fp,
 		"\t//\n"
@@ -70,35 +105,39 @@ void	cordic_angles(FILE *fp, int nstages, int phase_bits) {
 	fprintf(fp, "\twire\t[%d:0]\tcordic_angle [0:(NSTAGES-1)];\n\n",
 	phase_bits-1);
 
-	assert(phase_bits <= 32);
+	// assert(phase_bits <= 32);
 
 	for(unsigned k=0; k<(unsigned)nstages; k++) {
 		double		x, deg;
-		unsigned	phase_value;
+		unsigned long	phase_value;
 
 		x = atan2(1., pow(2,k+1));
 		deg = x * 180.0 / M_PI;
 		x *= (4.0 * (1ul<<(phase_bits-2))) / (M_PI * 2.0);
 		phase_value = (unsigned)x;
 		if (phase_bits <= 16) {
-			fprintf(fp, "\tassign\tcordic_angle[%2d] = %2d\'h%0*x; //%11.6f deg\n",
+			fprintf(fp, "\tassign\tcordic_angle[%2d] = %2d\'h%0*lx; //%11.6f deg\n",
 				k, phase_bits, (phase_bits+3)/4, phase_value,
 				deg);
 		} else { // if (phase_bits <= 32)
-			unsigned hibits, lobits;
+			unsigned long hibits, lobits;
 			lobits = (phase_value & 0x0ffff);
 			hibits = (phase_value >> 16);
-			fprintf(fp, "\tassign\tcordic_angle[%2d] = %2d\'h%0*x_%04x; //%11.6f deg\n",
+			fprintf(fp, "\tassign\tcordic_angle[%2d] = %2d\'h%0*lx_%04lx; //%11.6f deg\n",
 				k, phase_bits, (phase_bits-16+3)/4,
 				hibits, lobits, deg);
 		}
 	}
 
+	fprintf(fp, "\t// Std-Dev    : %.2f (Units)\n",
+			cordic_variance(nstages, phase_bits));
+	fprintf(fp, "\t// Phase Quantization: %.6f (Radians)\n",
+			sqrt(cordic_variance(nstages, phase_bits)));
 	fprintf(fp, "\t// Gain is %.6f\n", cordic_gain(nstages, phase_bits));
 	fprintf(fp, "\t// You can annihilate this gain by multiplying by 32\'h%08x\n",
 			(unsigned)(1.0/cordic_gain(nstages, phase_bits)
 					*(4.0 * (1ul<<30))));
-	fprintf(fp, "\t// and right shifting by 31 bits.\n");
+	fprintf(fp, "\t// and right shifting by 32 bits.\n");
 
 }
 
@@ -145,9 +184,9 @@ int	calc_phase_bits(const int output_width) {
 	for(phase_bits=3; phase_bits < 64; phase_bits++) {
 		double	ds, a;
 
-		a = (2.0*M_PI/(double)(1<<phase_bits));
+		a = (2.0*M_PI/(double)(1ul<<phase_bits));
 		ds = sin(a);
-		ds *= ((1<<output_width)-1);
+		ds *= ((1ul<<output_width)-1);
 		// printf("// Angle = %f, Sine-wave output = %f\n", a, ds);
 		if (ds < 0.5)
 			break;
