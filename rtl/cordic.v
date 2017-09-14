@@ -49,7 +49,7 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 			XTRA= 3,// Extra bits for internal precision
 			WW=15,	// Our working bit-width
 			PW=19;	// Bits in our phase variables
-	input					i_clk, i_reset, i_ce;
+	input	wire				i_clk, i_reset, i_ce;
 	input	wire	signed	[(IW-1):0]		i_xval, i_yval;
 	input	wire		[(PW-1):0]			i_phase;
 	output	reg	signed	[(OW-1):0]	o_xval, o_yval;

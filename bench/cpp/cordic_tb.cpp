@@ -202,11 +202,11 @@ int main(int  argc, char **argv) {
 	// = x^3/3 |_-1/2^1/2
 	// = 1/24 + 1/24 = 1/12
 	// Two of these added together is 2/12 per item
-	printf("AVG Err: %.6f (%.6f Relative, %.4f expected)\n",
+	printf("AVG Err: %.6f Units (%.6f Relative, %.4f Units expected)\n",
 		averr, averr / mag, sqrt(QUANTIZATION_VARIANCE));
 	if (averr > 1.5 * sqrt(QUANTIZATION_VARIANCE))
 		failed = true;
-	printf("MAX Err: %.6f (%.6f Relative)\n", mxerr, mxerr / mag);
+	printf("MAX Err: %.6f Units (%.6f Relative)\n", mxerr, mxerr / mag);
 	if (mxerr > 3.0)
 		failed = true;
 	printf("  Mag  : %.6f\n", mag);
