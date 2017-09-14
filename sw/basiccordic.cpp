@@ -82,7 +82,7 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		"\t\t\tXTRA=%2d,// Extra bits for internal precision\n"
 		"\t\t\tWW=%2d,\t// Our working bit-width\n"
 		"\t\t\tPW=%2d;\t// Bits in our phase variables\n"
-		"\tinput\t\t\t\t\ti_clk, %si_ce;\n"
+		"\tinput\twire\t\t\t\ti_clk, %si_ce;\n"
 		"\tinput\twire\tsigned\t[(IW-1):0]\t\ti_xval, i_yval;\n"
 		"\tinput\twire\t\t[(PW-1):0]\t\t\ti_phase;\n"
 		"\toutput\treg\tsigned\t[(OW-1):0]\to_xval, o_yval;\n",
