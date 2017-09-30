@@ -42,7 +42,7 @@
 
 #include "cordiclib.h"
 
-double	cordic_gain(int nstages, int phase_bits) {
+double	cordic_gain(int nstages) {
 	double	gain = 1.0;
 
 	for(int k=0; k<nstages; k++) {
@@ -56,39 +56,49 @@ double	cordic_gain(int nstages, int phase_bits) {
 	return gain;
 }
 
-double	cordic_variance(int nstages, int phase_bits) {
-	double	variance = 0.0;
+double	phase_variance(int nstages, int phase_bits) {
+	double	RAD_TO_PHASE = (1ul << (phase_bits-1)) / M_PI;
+	double	variance;
 
+	// Start with an initial quantization variance, before we do anything
+	variance = 1./12.;
 	for(unsigned k=0; k<(unsigned)nstages; k++) {
-		double		x, err, scale;
+		double		x, err;
 		unsigned long	phase_value;
 
-		x = atan2(1., pow(2,k+1));
-		scale = (4.0 * (1ul<<(phase_bits-2))) / (M_PI * 2.0);
-		x *= scale;
+		x = atan2(1., pow(2,k+1)) * RAD_TO_PHASE;
 		phase_value = (unsigned)x;
+		// Calculate the error between the phase we want, and our
+		// integer phase representation
 		err = phase_value - x;
-		// Convert the error back to radians
-		err /= scale;
 		// Square it to turn it into a variance.
 		err *= err;
 		// Accumulate it with the rest of the variance(s)
 		// from the cordic angles
 		variance += err;
-	} return variance;
+	}
+
+	// Convert the calculated variance back to radians
+	variance /= pow(RAD_TO_PHASE,2.);
+	return variance;
 }
 
-double	transform_quantization_variance(int nstages, int dropped_bits) {
-	// integral _0 ^1 x^2 dx = x^3/3 = 1/3
-	//	* number of stages
-	//	* 2 (x + y)
-	double	stage_variance, drop_scale;
+double	transform_quantization_variance(int nstages, int xtrabits, int dropped_bits) {
+	double	current_variance;
 
-	stage_variance = (2.0 * nstages / 3.0);
-	drop_scale = 1.0 / ((double)(1ul<<dropped_bits));
-	stage_variance *= (drop_scale * drop_scale);
+	// Start with any incoming quantization variance, assumed from the
+	// fact that the incoming bits are quantized to begin with.
+	current_variance = pow(2,2*xtrabits)/12.;
 
-	return stage_variance + (2./12.);
+	for(int k=0; k<nstages; k++)
+		current_variance = (1+pow(4,-k-1))*current_variance + 1./3.;
+
+	// If we drop bits from this on the output, then we add more variance
+	// in the process.  This is rounding variance, so the variance is
+	// (roughly) 1/12th
+	if (dropped_bits > 0)
+		current_variance = pow(2,-2*dropped_bits)*current_variance + 1/12.;
+	return current_variance;
 }
 
 void	cordic_angles(FILE *fp, int nstages, int phase_bits) {
@@ -113,8 +123,14 @@ void	cordic_angles(FILE *fp, int nstages, int phase_bits) {
 
 		x = atan2(1., pow(2,k+1));
 		deg = x * 180.0 / M_PI;
+
+		// Convert this value from radians to our integer phase units
 		x *= (4.0 * (1ul<<(phase_bits-2))) / (M_PI * 2.0);
+
+		// Here's where we truncate our phase from a double to an
+		// integer
 		phase_value = (unsigned)x;
+
 		if (phase_bits <= 16) {
 			fprintf(fp, "\tassign\tcordic_angle[%2d] = %2d\'h%0*lx; //%11.6f deg\n",
 				k, phase_bits, (phase_bits+3)/4, phase_value,
@@ -130,12 +146,12 @@ void	cordic_angles(FILE *fp, int nstages, int phase_bits) {
 	}
 
 	fprintf(fp, "\t// Std-Dev    : %.2f (Units)\n",
-			cordic_variance(nstages, phase_bits));
+			phase_variance(nstages, phase_bits));
 	fprintf(fp, "\t// Phase Quantization: %.6f (Radians)\n",
-			sqrt(cordic_variance(nstages, phase_bits)));
-	fprintf(fp, "\t// Gain is %.6f\n", cordic_gain(nstages, phase_bits));
+			sqrt(phase_variance(nstages, phase_bits)));
+	fprintf(fp, "\t// Gain is %.6f\n", cordic_gain(nstages));
 	fprintf(fp, "\t// You can annihilate this gain by multiplying by 32\'h%08x\n",
-			(unsigned)(1.0/cordic_gain(nstages, phase_bits)
+			(unsigned)(1.0/cordic_gain(nstages)
 					*(4.0 * (1ul<<30))));
 	fprintf(fp, "\t// and right shifting by 32 bits.\n");
 

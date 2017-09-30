@@ -40,9 +40,9 @@
 
 #include <stdio.h>
 
-extern	double	cordic_gain(int nstages, int phase_bits);
-extern	double	cordic_variance(int nstages, int phase_bits);
-extern	double	transform_quantization_variance(int nstages, int dropped_bits);
+extern	double	cordic_gain(int nstages);
+extern	double	phase_variance(int nstages, int phase_bits);
+extern	double	transform_quantization_variance(int nstages, int xtrabits, int dropped_bits);
 extern	void	cordic_angles(FILE *fp, int nstages, int phase_bits);
 extern	int	calc_stages(const int working_width, const int phase_bits);
 extern	int	calc_stages(const int phase_bits);

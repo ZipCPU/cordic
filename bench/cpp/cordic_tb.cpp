@@ -42,6 +42,7 @@
 #include <verilated_vcd_c.h>
 #include "Vcordic.h"
 #include "cordic.h"
+#include "fft.h"
 #include "testb.h"
 
 class	CORDIC_TB : public TESTB<Vcordic> {
@@ -50,25 +51,33 @@ public:
 
 	CORDIC_TB(void) {
 		m_debug = true;
-		m_core->i_reset = 1;
 		m_core->i_ce    = 1;
 		m_core->i_xval  = (1ul<<(IW-1))-1;
 		m_core->i_yval  = 0;
 		m_core->i_phase = 0;
 		m_core->i_aux   = 0;
+#ifdef	HAS_RESET_WIRE
+		m_core->i_reset = 1;
 		tick();
+#endif
 	}
 };
 
-const int	LGNSAMPLES=11;
+const int	LGNSAMPLES=PW;
 const int	NSAMPLES=(1ul<<LGNSAMPLES);
 
 int main(int  argc, char **argv) {
 	Verilated::commandArgs(argc, argv);
 	CORDIC_TB	*tb = new CORDIC_TB;
-	int	pdata[NSAMPLES], xval[NSAMPLES], yval[NSAMPLES],
-		ixval[NSAMPLES], iyval[NSAMPLES], idx, shift;
+	int	*pdata, *xval, *yval,
+		*ixval, *iyval, idx, shift;
 	double	scale;
+
+	pdata = new int[NSAMPLES];
+	xval  = new int[NSAMPLES];
+	yval  = new int[NSAMPLES];
+	ixval  = new int[NSAMPLES];
+	iyval  = new int[NSAMPLES];
 
 	// This only works on DUT's with the aux flag turned on.
 	assert(HAS_AUX);
@@ -78,13 +87,13 @@ int main(int  argc, char **argv) {
 
 	shift = (8*sizeof(int)-OW);
 
-	scale  = tb->m_core->i_xval * tb->m_core->i_xval;
-	scale += tb->m_core->i_yval * tb->m_core->i_yval;
+	scale  = tb->m_core->i_xval * (double)tb->m_core->i_xval;
+	scale += tb->m_core->i_yval * (double)tb->m_core->i_yval;
 	scale  = sqrt(scale);
 
 	idx = 0;
 	for(int i=0; i<NSAMPLES; i++) {
-		int	shift = (PW-(LGNSAMPLES-1));
+		int	shift = (PW-LGNSAMPLES);
 		if (shift < 0) {
 			int	sv = i;
 			if (i & (1ul<<(-shift)))
@@ -166,9 +175,9 @@ int main(int  argc, char **argv) {
 		// a = sumxw / 2 / sumsq
 		//
 		// Measure the magnitude of what we placed into the input
-		imag+=ixval[i] *ixval[i] +iyval[i] *iyval[i];
+		imag+=ixval[i] *(double)ixval[i] +iyval[i] *(double)iyval[i];
 		// The magnitude we get on the output
-		mag += xval[i] * xval[i] + yval[i] * yval[i];
+		mag += xval[i] * (double)xval[i] + yval[i] * (double)yval[i];
 		// The error between the value requested and the value resulting
 		err = (dxval - xval[i]) * (dxval - xval[i]);
 		err+= (dyval - yval[i]) * (dyval - yval[i]);
@@ -177,25 +186,39 @@ int main(int  argc, char **argv) {
 		// gain right
 		sumxy += dxval * xval[i];
 		sumxy += dyval * yval[i];
-		sumsq += xval[i] * xval[i] + yval[i]*yval[i];
+		sumsq += xval[i] * (double)xval[i] + yval[i]*(double)yval[i];
 		sumd  += dxval   *dxval    +dyval * dyval;
 		averr += err;
 
-		// printf("%6d %6d -> %f %f (predicted) -> %f err (%f)\n",
-		//	xval[i], yval[i], dxval, dyval, err, averr);
+		if (PW<10) {
+		printf("%6d %6d -> %9.2f %9.2f (predicted) -> %f err (%f), mag=%f\n",
+			xval[i], yval[i], dxval, dyval, err, averr, mag);
+		}
 		err = sqrt(err);
 		if (err > mxerr)
 			mxerr = err;
 	}
 
+	bool	failed = false;
+	double	expected_err;
+
+	expected_err = QUANTIZATION_VARIANCE
+			+ PHASE_VARIANCE_RAD*scale*scale*GAIN*GAIN;
+
 	averr /= (NSAMPLES);
 	averr  = sqrt(averr);
+	if (mag <= 0) {
+		printf("ERR: Negative magnitude, %f\n", mag);
+		goto test_failed;
+	}
 	mag   /= (NSAMPLES);
 	mag    = sqrt(mag);
+	if (imag <= 0) {
+		printf("ERR: Negative i-magnitude, %f\n", imag);
+		goto test_failed;
+	}
 	imag  /= (NSAMPLES);
 	imag   = sqrt(imag);
-
-	bool	failed = false;
 
 	// What average error do we expect?
 	// int_-1/2^1/2 x^2 dx
@@ -203,24 +226,67 @@ int main(int  argc, char **argv) {
 	// = 1/24 + 1/24 = 1/12
 	// Two of these added together is 2/12 per item
 	printf("AVG Err: %.6f Units (%.6f Relative, %.4f Units expected)\n",
-		averr, averr / mag, sqrt(QUANTIZATION_VARIANCE));
-	if (averr > 1.5 * sqrt(QUANTIZATION_VARIANCE))
+		averr, averr / mag, sqrt(expected_err));
+	if (averr > 1.5 * sqrt(expected_err))
 		failed = true;
-	printf("MAX Err: %.6f Units (%.6f Relative)\n", mxerr, mxerr / mag);
-	if (mxerr > 3.0)
+	printf("MAX Err: %.6f Units (%.6f Relative, %.6f threshold)\n", mxerr,
+		mxerr / mag, 5.2*sqrt(expected_err));
+	if (mxerr > 5.2 * sqrt(expected_err)) {
+		printf("ERR: Maximum error is out of bounds\n");
 		failed = true;
+	}
 	printf("  Mag  : %.6f\n", mag);
 	printf("(Gain) : %.6f\n", GAIN);
 	printf("(alpha): %.6f\n", sumxy / sumsq);
-	printf("SNR    : %.2f dB\n", 10.0*log(scale * scale / QUANTIZATION_VARIANCE)/log(10.0));
-	if (fabs(sumxy / sumsq - 1.0) > 0.01)
-		failed = true;
+	scale *= GAIN;
+	printf("CNR    : %.2f dB (expected %.2f dB)\n",
+		10.0*log(scale * scale / averr / averr)/log(10.0),
+		BEST_POSSIBLE_CNR);
+	if (fabs(sumxy / sumsq - 1.0) > 0.01) {
+		printf("(alpha)is out of bounds!\n");
+		goto test_failed;
+	} if (failed)
+		goto test_failed;
 
-	if (failed) {
-		printf("TEST FAILURE\n");
-		exit(EXIT_FAILURE);
-	} else {
-		printf("SUCCESS!!\n");
-		exit(EXIT_SUCCESS);
-	}
+	// Estimate the spurious free dynamic range
+	if ((PW < 26)&&(NSAMPLES == (1ul << PW))) {
+		typedef	std::complex<double>	COMPLEX;
+		COMPLEX	*outpt;
+		const	unsigned long	FFTLEN=(1ul<<PW);
+
+		outpt = new COMPLEX[FFTLEN];
+
+		for(unsigned k=0; k<FFTLEN; k++) {
+			outpt[k].real() = xval[k];
+			outpt[k].imag() = yval[k];
+		}
+
+		// Now we need to do an FFT
+		cfft((double *)outpt, FFTLEN);
+
+		double	master, spur, tmp;
+
+		// Master is the energy in the signal of interest
+		master = norm(outpt[1]);
+
+		// SPUR is the energy in any other FFT bin output
+		spur = norm(outpt[0]);
+		for(unsigned k=2; k<FFTLEN; k++) {
+			tmp = norm(outpt[k]);
+			if (tmp > spur)
+				spur = tmp;
+		}
+
+		printf("SFDR = %7.2f dBc\n",
+			10*log(master / spur)/log(10.));
+	} else if (PW >= 26)
+		printf("Too many phase bits ... skipping SFDR calculation\n");
+
+	printf("SUCCESS!!\n");
+	exit(EXIT_SUCCESS);
+
+test_failed:
+	printf("TEST FAILURE\n");
+	exit(EXIT_FAILURE);
 }
+

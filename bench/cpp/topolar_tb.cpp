@@ -59,16 +59,27 @@ public:
 	}
 };
 
-const int	LGNSAMPLES=15;
+const int	LGNSAMPLES=PW;
 const int	NSAMPLES=(1<<LGNSAMPLES);
 
 int main(int  argc, char **argv) {
 	Verilated::commandArgs(argc, argv);
 	TOPOLAR_TB	*tb = new TOPOLAR_TB;
-	int	ipdata[NSAMPLES], ixval[NSAMPLES], iyval[NSAMPLES],
-		imag[NSAMPLES], ophase[NSAMPLES], omag[NSAMPLES],
+	int	*ipdata, *ixval,  *iyval,
+		*imag,   *ophase, *omag,
 		idx, shift, pshift;
-	double	dpdata[NSAMPLES];
+	double	*dpdata, sum_perr = 0.0;
+
+	const	double	MAXPHASE = pow(2.0,PW);
+	const	double	RAD_TO_PHASE = MAXPHASE / M_PI / 2.0;
+
+	ipdata = new int[NSAMPLES];
+	ixval  = new int[NSAMPLES];
+	iyval  = new int[NSAMPLES];
+	imag   = new int[NSAMPLES];
+	omag   = new int[NSAMPLES];
+	ophase = new int[NSAMPLES];
+	dpdata = new double[NSAMPLES];
 
 	tb->opentrace("topolar_tb.vcd");
 	tb->reset();
@@ -90,8 +101,8 @@ int main(int  argc, char **argv) {
 		ixval[i] = (int)cs;
 		iyval[i] = (int)sn;
 		imag[i]  = (int)mg;
-		// dpdata[i] = atan2(iyval[i], ixval[i]);
-		dpdata[i] = ph;
+		dpdata[i] = atan2(iyval[i], ixval[i]);
+		// dpdata[i] = ph;
 		tb->m_core->i_xval  = ixval[i];
 		tb->m_core->i_yval  = iyval[i];
 		tb->m_core->i_aux   = 1;
@@ -138,21 +149,21 @@ int main(int  argc, char **argv) {
 		}
 	}
 
-	double	mxperr = 0.0, mxverr = 0.0,
-		maxphase = pow(2.0,PW);
+	double	mxperr = 0.0, mxverr = 0.0;
 	for(int i=0; i<NSAMPLES; i++) {
 		double	mgerr, epdata, dperr, emag;
 
-		epdata = dpdata[i] / 2.0 / M_PI * maxphase;
+		epdata = dpdata[i] * RAD_TO_PHASE;
 		if (epdata < 0.0)
-			epdata += maxphase;
+			epdata += MAXPHASE;
 		dperr = ophase[i] - epdata;
-		while (dperr > maxphase/2.)
-			dperr -= maxphase;
-		while (dperr < -maxphase/2.)
-			dperr += maxphase;
-		if (dperr > mxperr)
-			mxperr = dperr;
+		while (dperr > MAXPHASE/2.)
+			dperr -= MAXPHASE;
+		while (dperr < -MAXPHASE/2.)
+			dperr += MAXPHASE;
+		if (fabs(dperr) > mxperr)
+			mxperr = fabs(dperr);
+		sum_perr += dperr * dperr;
 
 		emag = imag[i] * GAIN;// * sqrt(2);
 		if (IW+1 > OW)
@@ -165,8 +176,8 @@ int main(int  argc, char **argv) {
 		if (mgerr > mxverr)
 			mxverr = mgerr;
 
-		if (epdata > maxphase/2)
-			epdata -= maxphase;
+		if (epdata > MAXPHASE/2)
+			epdata -= MAXPHASE;
 		//printf("%08x %08x -> %6d %08x/%12d [%9.6f %12.1f],[%9.6f %13.1f]\n",
 		//	ixval[i], iyval[i],
 		//	omag[i], ophase[i],ophase[i],
@@ -187,12 +198,12 @@ int main(int  argc, char **argv) {
 			ovals[2] = omag[k];
 			ovals[3] = ophase[k];
 
-			epdata = dpdata[k] / 2.0 / M_PI * maxphase;
+			epdata = dpdata[k] * RAD_TO_PHASE;
 			dperr = ophase[k] - epdata;
-			while (dperr > maxphase/2.)
-				dperr -= maxphase;
-			while (dperr < -maxphase/2.)
-				dperr += maxphase;
+			while (dperr > MAXPHASE/2.)
+				dperr -= MAXPHASE;
+			while (dperr < -MAXPHASE/2.)
+				dperr += MAXPHASE;
 			ovals[4] = (int)dperr;
 			fwrite(ovals, sizeof(ovals[0]), sizeof(ovals)/sizeof(ovals[0]), dbgfp);
 		}
@@ -200,33 +211,41 @@ int main(int  argc, char **argv) {
 		fclose(dbgfp);
 	}
 
+	sum_perr /= NSAMPLES;
+
 	bool	failed_test = false;
 	double	expected_phase_err;
 
 	// First phase error: based upon the smallest arctan difference
 	// between samples.
-	expected_phase_err = atan2(1,(1<<(IW-1)))*maxphase / M_PI / 2.;
-	expected_phase_err *= expected_phase_err;
-	// Plus the quantization error in the phase calculation
-	expected_phase_err += QUANTIZATION_VARIANCE;
+	//
+	// expected_phase_err = atan2(1,(1<<(IW-1))) * RAD_TO_PHASE;
+	// expected_phase_err *= expected_phase_err;
+	//
+	// expected_phase_err=pow((1<<(IW-1)),-2)*RAD_TO_PHASE*RAD_TO_PHASE/12.;
+	//
+	// expected_phase_err += QUANTIZATION_VARIANCE;
+	// expected_phase_err *= (1./12.);
+	expected_phase_err = 0.0;
 	// Plus any truncation error in the in the phase values
+	// 	Swap the units from radians to integer phase units
 	expected_phase_err += PHASE_VARIANCE_RAD
-				* ((1.0*(1<<PW)) / M_PI / 2.)
-				* ((1.0*(1<<PW)) / M_PI / 2.);
+				* RAD_TO_PHASE * RAD_TO_PHASE;
 	expected_phase_err = sqrt(expected_phase_err);
 	if (expected_phase_err < 1.0)
 		expected_phase_err = 1.0;
-	if (mxperr > 2.0 * expected_phase_err)
+	if (mxperr > 3.4 * expected_phase_err)
 		failed_test = true;
 
 	if (mxverr > 2.0 * sqrt(QUANTIZATION_VARIANCE))
 		failed_test = true;
 
-	printf("Max phase     error: %.2f (%.6f Rel), expect %.2f\n", mxperr,
-		mxperr / (2.0 * (1<<(PW-1))),
-		expected_phase_err);
+	printf("Max phase     error: %.2f (%.6f Rel)\n", mxperr,
+		mxperr / (2.0 * (1<<(PW-1))));
 	printf("Max magnitude error: %9.6f, expect %.2f\n", mxverr,
 		sqrt(QUANTIZATION_VARIANCE));
+	printf("Avg phase err:       %9.6f, expect %.2f\n", sqrt(sum_perr),
+		sqrt(PHASE_VARIANCE_RAD) * RAD_TO_PHASE);
 
 	if (failed_test) {
 		printf("TEST FAILED!!\n");

@@ -306,17 +306,18 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 		fprintf(fhp, "const int	PW = %d;\n", phase_bits);
 		fprintf(fhp, "const int	NSTAGES = %d;\n", nstages);
 		fprintf(fhp, "const double\tQUANTIZATION_VARIANCE = %.16f; // (Units^2)\n",
-			transform_quantization_variance(nstages, working_width-ow));
+			transform_quantization_variance(nstages,
+				working_width-iw, working_width-ow));
 		fprintf(fhp, "const double\tPHASE_VARIANCE_RAD = %.16f; // (Radians^2)\n",
-			cordic_variance(nstages, phase_bits));
+			phase_variance(nstages, phase_bits));
 		fprintf(fhp, "const double\tGAIN = %.16f;\n",
-			cordic_gain(nstages, phase_bits));
-		fprintf(fhp, "const bool HAS_RESET = %s;\n", with_reset?"true":"false");
-		fprintf(fhp, "const bool HAS_AUX   = %s;\n", with_aux?"true":"false");
+			cordic_gain(nstages));
+		fprintf(fhp, "const bool\tHAS_RESET = %s;\n", with_reset?"true":"false");
+		fprintf(fhp, "const bool\tHAS_AUX   = %s;\n", with_aux?"true":"false");
 		if (with_reset)
-			fprintf(fhp, "#define	HAS_RESET_WIRE\n");
+			fprintf(fhp, "#define\tHAS_RESET_WIRE\n");
 		if (with_aux)
-			fprintf(fhp, "#define	HAS_AUX_WIRES\n");
+			fprintf(fhp, "#define\tHAS_AUX_WIRES\n");
 		fprintf(fhp, "#endif	// %s\n", str);
 
 		delete[] str;

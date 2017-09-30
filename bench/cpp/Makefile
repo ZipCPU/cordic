@@ -19,6 +19,8 @@
 ##	cordic_tb:	A test bench for the basic (polar to rectangular)
 ##			cordic.  Prints success or failure on the last line.
 ##
+##		This program depends upon having FFTW installed.
+##
 ##	topolar_tb:	A test bench for the rectangular to polar coordinate
 ##			conversion form of the cordic.  Prints success or
 ##			failure on the last line.
@@ -66,8 +68,8 @@ TBOBJ:= $(ROBJD)/Vcordic__ALL.a
 PLOBJ:= $(ROBJD)/Vtopolar__ALL.a
 CFLAGS:= -g -Og -Wall $(INCS)
 
-cordic_tb:	cordic_tb.cpp $(TBOBJ) $(ROBJD)/Vcordic.h testb.h
-	$(CXX) $(CFLAGS) cordic_tb.cpp $(VSRCS) $(TBOBJ) -o $@
+cordic_tb:	cordic_tb.cpp $(TBOBJ) $(ROBJD)/Vcordic.h testb.h fft.h fftw.c
+	$(CXX) $(CFLAGS) cordic_tb.cpp fftw.c $(VSRCS) $(TBOBJ) -lfftw3 -o $@
 
 topolar_tb:	topolar_tb.cpp $(PLOBJ) $(ROBJD)/Vtopolar.h testb.h
 	$(CXX) $(CFLAGS) topolar_tb.cpp $(VSRCS) $(PLOBJ) -o $@

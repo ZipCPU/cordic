@@ -95,6 +95,7 @@ cordic.v: basiccordic
 $(VSRCD)/cordic.v: gencordic
 	$(mk-rtldir)
 	./gencordic -f $(VSRCD)/cordic.v  -v -i 12 -o 12 -t p2r -x 2 -c
+	# ./gencordic -f $(VSRCD)/cordic.v  -v -i 24 -o 24 -t p2r -x 1 -c
 
 .PHONY: sintable sintable.v
 sintable: $(VSRCD)/sintable.v

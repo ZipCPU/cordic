@@ -1,12 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	cordic.h
+// Filename: 	fft.h
 //
 // Project:	A series of CORDIC related projects
 //
-// Purpose:	This .h file notes the default parameter values from
-//		within the generated file.  It is used to communicate
-//	information about the design to the bench testing code.
+// Purpose:	To provide a wrapper around generic access to the FFTW FFT
+//		routines.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -16,7 +15,7 @@
 // Copyright (C) 2017, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -37,20 +36,34 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#ifndef	CORDIC_H
-#define	CORDIC_H
-const int	IW = 8;
-const int	OW = 8;
-const int	NEXTRA = 5;
-const int	WW = 13;
-const int	PW = 17;
-const int	NSTAGES = 13;
-const double	QUANTIZATION_VARIANCE = 2.0059e-01; // (Units^2)
-const double	PHASE_VARIANCE_RAD = 8.8368e-09; // (Radians^2)
-const double	GAIN = 1.1644353426140084;
-const double	BEST_POSSIBLE_CNR = 50.37;
-const bool	HAS_RESET = true;
-const bool	HAS_AUX   = true;
-#define	HAS_RESET_WIRE
-#define	HAS_AUX_WIRES
-#endif	// CORDIC_H
+#ifndef	FFT_H
+#define	FFT_H
+
+#include <complex>
+
+#ifdef	__cplusplus
+extern	"C"	{
+// We'll provide the same basic access interfaces that Numerical recipes used.
+// The actual method may, or may not therefore, be Numerical Recipes based
+extern	void	numer_fft(double *data, unsigned nn, int isign);
+extern	unsigned	nextlg(unsigned long vl);
+}
+#endif
+
+#ifndef	M_PI
+#define	M_PI	(3.1415926535897932384626433832795028841971693993751)
+#endif
+
+#ifdef	__cplusplus
+typedef	std::complex<double>	COMPLEX;
+inline void	cfft(double *cdata, unsigned clen)  { numer_fft(cdata, clen, -1); }
+inline void	icfft(double *cdata, unsigned clen) { numer_fft(cdata, clen,  1); }
+inline void	cfft(COMPLEX *cdata, unsigned clen)  { numer_fft((double *)cdata, clen, -1); }
+inline void	icfft(COMPLEX *cdata, unsigned clen) { numer_fft((double *)cdata, clen,  1); }
+#else
+extern	void	cfft(double *cdata, unsigned clen);
+extern	void	icfft(double *cdata, unsigned clen);
+#endif
+
+#endif
+
