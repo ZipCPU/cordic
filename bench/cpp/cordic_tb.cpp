@@ -240,7 +240,8 @@ int main(int  argc, char **argv) {
 	printf("(alpha): %.6f\n", sumxy / sumsq);
 	scale *= GAIN;
 	printf("CNR    : %.2f dB (expected %.2f dB)\n",
-		10.0*log(scale * scale / averr / averr)/log(10.0),
+		10.0*log(scale * scale
+			/ (averr * averr))/log(10.0),
 		BEST_POSSIBLE_CNR);
 	if (fabs(sumxy / sumsq - 1.0) > 0.01) {
 		printf("(alpha)is out of bounds!\n");

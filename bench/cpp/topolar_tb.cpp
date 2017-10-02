@@ -185,7 +185,7 @@ int main(int  argc, char **argv) {
 		//	mgerr, dperr);
 	}
 
-	if(true) {
+	if(false) {
 		FILE	*dbgfp;
 		dbgfp = fopen("topolar.32t", "w");
 		assert(dbgfp);
