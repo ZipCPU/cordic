@@ -73,6 +73,8 @@ void	usage(void) {
 "\t\t\twhen I think of a cordic.  You can use this to create sin/cos\n"
 "\t\t\tfunctions, or even to multiply by a complex conjugate.\n"
 "\t\tr2p\tRectangular to polar coordinate conversion\n"
+"\t\tqtr\tQuarter-wave table lookup sinewave generator"
+"\t\ttbl\tStraight table lookup sinewave generator"
 "\t-v\tTurns on any verbose outputting\n"
 "\t-x <xtrabits>\tUses this many extra bits in rectangular\n"
 "\t\t\tvalue processing\n");
@@ -84,7 +86,7 @@ int	main(int argc, char **argv) {
 	const char	*fname = NULL;
 	bool	with_reset = true, with_aux = true;
 	bool	polar_to_rect = false, rect_to_polar = true, verbose=false,
-		gen_sintable = false, gen_quarterwav = false, c_header;
+		gen_sintable = false, gen_quarterwav = false, c_header = false;
 	int	c;
 	FILE	*fp, *fhp;
 
