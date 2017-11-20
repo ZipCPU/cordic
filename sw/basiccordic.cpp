@@ -285,12 +285,12 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		fprintf(fp,
 			"\t// Round our result towards even\n"
 			"\twire\t[(WW-1):0]\tpre_xval, pre_yval;\n\n"
-			"\tassign\tpre_xval = xv[NSTAGES] + {{(OW){1\'b0}},\n"
+			"\tassign\tpre_xval = xv[NSTAGES] + $signed({{(OW){1\'b0}},\n"
 				"\t\t\t\txv[NSTAGES][(WW-OW)],\n"
-				"\t\t\t\t{(WW-OW-1){!xv[NSTAGES][WW-OW]}}};\n"
-			"\tassign\tpre_yval = yv[NSTAGES] + {{(OW){1\'b0}},\n"
+				"\t\t\t\t{(WW-OW-1){!xv[NSTAGES][WW-OW]}}});\n"
+			"\tassign\tpre_yval = yv[NSTAGES] + $signed({{(OW){1\'b0}},\n"
 				"\t\t\t\tyv[NSTAGES][(WW-OW)],\n"
-				"\t\t\t\t{(WW-OW-1){!yv[NSTAGES][WW-OW]}}};\n"
+				"\t\t\t\t{(WW-OW-1){!yv[NSTAGES][WW-OW]}}});\n"
 			"\n");
 		fprintf(fp,
 			"\talways @(posedge i_clk)\n"

@@ -16,7 +16,7 @@
 // Copyright (C) 2017, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -39,16 +39,16 @@
 //
 #ifndef	CORDIC_H
 #define	CORDIC_H
-const int	IW = 8;
-const int	OW = 8;
-const int	NEXTRA = 5;
-const int	WW = 13;
-const int	PW = 17;
-const int	NSTAGES = 13;
-const double	QUANTIZATION_VARIANCE = 2.0059e-01; // (Units^2)
-const double	PHASE_VARIANCE_RAD = 8.8368e-09; // (Radians^2)
-const double	GAIN = 1.1644353426140084;
-const double	BEST_POSSIBLE_CNR = 50.37;
+const int	IW = 24;
+const int	OW = 24;
+const int	NEXTRA = 2;
+const int	WW = 26;
+const int	PW = 30;
+const int	NSTAGES = 26;
+const double	QUANTIZATION_VARIANCE = 7.4034e-01; // (Units^2)
+const double	PHASE_VARIANCE_RAD = 3.1314e-16; // (Radians^2)
+const double	GAIN = 1.1644353455059144;
+const double	BEST_POSSIBLE_CNR = 140.73;
 const bool	HAS_RESET = true;
 const bool	HAS_AUX   = true;
 #define	HAS_RESET_WIRE
