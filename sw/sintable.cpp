@@ -43,13 +43,13 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include "hexfile.h"
 
 #include "legal.h"
 
 void	sintable(FILE *fp, const char *fname, int lgtable, int ow,
 		bool with_reset, bool with_aux) {
-	FILE	*hexfp;
-	char	*name, *hexfname;
+	char	*name;
 	const	char	PURPOSE[] =
 	"This is a very simple sinewave table lookup approach\n"
 	"//\t\tapproach to generating a sine wave.  It has the lowest latency\n"
@@ -121,37 +121,26 @@ void	sintable(FILE *fp, const char *fname, int lgtable, int ow,
 	}
 	fprintf(fp, "endmodule\n");
 
-	int slen = strlen(fname);
-	hexfname = new char [strlen(fname)+5];
-	strcpy(hexfname, fname);
-	if ((slen>4)&&(hexfname[slen-2]=='.'))
-		strcpy(&hexfname[slen-2], ".hex");
-	else
-		strcat(hexfname, ".hex");
-	hexfp = fopen(hexfname, "w");
-	if (NULL == hexfp) {
-		fprintf(stderr, "ERR: Cannot open %s for writing\n",
-			hexfname);
-	} else {
-		int	tbl_entries = (1<<lgtable),
-			maxv = (1<<(ow-1))-1;
+	long	*tbldata;
+	tbldata = new long[(1<<lgtable)];
+	int	tbl_entries = (1<<lgtable);
+	long	maxv = (1l<<(ow-1))-1l;
 
-		for(int k=0; k<tbl_entries; k++) {
-			double	dv, ph;
-			ph = 2.0 * M_PI * (double)k / (double)tbl_entries;
-			dv = maxv * sin(ph);
+	for(int k=0; k<tbl_entries; k++) {
+		double	ph;
+		ph = 2.0 * M_PI * (double)k / (double)tbl_entries;
 
-			if (0 == (k%8))
-				fprintf(hexfp, "%s@%08x ", (k!=0)?"\n":"", k);
-			fprintf(hexfp, "%0*x ", (ow+3)/4, (int)(dv) & ((1<<ow)-1));
-		} fprintf(hexfp, "\n");
+		tbldata[k]  = (long)maxv * sin(ph);
 	}
+
+	hextable(fname, lgtable, ow, tbldata);
+
+	delete[] tbldata;
 }
 
 void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 		bool with_reset, bool with_aux) {
-	FILE	*hexfp;
-	char	*name, *hexfname;
+	char	*name;
 	const	char	PURPOSE[] =
 	"This is a touch more complicated than the simple sinewave table\n"
 	"//\t\tlookup approach to generating a sine wave.  This approach\n"
@@ -249,34 +238,19 @@ void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 
 	fprintf(fp, "endmodule\n");
 
-	int slen = strlen(fname);
-	hexfname = new char [strlen(fname)+5];
-	strcpy(hexfname, fname);
-	if ((slen>4)&&('.' == hexfname[slen-2]))
-		strcpy(&hexfname[slen-2], ".hex");
-	else
-		strcat(hexfname, ".hex");
-	hexfp = fopen(hexfname, "w");
-	if (NULL == hexfp) {
-		fprintf(stderr, "ERR: Cannot open %s for writing\n",
-			hexfname);
-	} else {
-		int	tbl_entries = (1<<lgtable),
-			maxv = (1<<(ow-1))-1;
-		if (ow >= 31) {
-			printf("Internal error: output width too large for internal data types.\n");
-			assert(ow < 31);
-		}
+	long	*tbldata;
+	tbldata = new long[(1<<lgtable)];
+	int	tbl_entries = (1<<lgtable);
+	long	maxv = (1l<<(ow-1))-1l;
 
-		for(int k=0; k<tbl_entries/4; k++) {
-			double	dv, ph;
-			ph = 2.0 * M_PI * (double)k / (double)tbl_entries;
-			ph+=       M_PI             / (double)tbl_entries;
-			dv = maxv * sin(ph);
-
-			if (0 == (k%8))
-				fprintf(hexfp, "%s@%08x ", (k!=0)?"\n":"", k);
-			fprintf(hexfp, "%0*x ", (ow+3)/4, (int)(dv) & ((1<<ow)-1));
-		} fprintf(hexfp, "\n");
+	for(int k=0; k<tbl_entries/4; k++) {
+		double	ph;
+		ph = 2.0 * M_PI * (double)k / (double)tbl_entries;
+		ph+=       M_PI             / (double)tbl_entries;
+		tbldata[k] = maxv * sin(ph);
 	}
+
+	hextable(fname, lgtable-2, ow, tbldata);
+
+	delete[] tbldata;
 }
