@@ -64,7 +64,7 @@ fprintf(fp,
 "// Copyright (C) 2017, Gisselquist Technology, LLC\n"
 "//\n"
 "// This program is free software (firmware): you can redistribute it and/or\n"
-"// modify it under the terms of  the GNU General Public License as published\n"
+"// modify it under the terms of the GNU General Public License as published\n"
 "// by the Free Software Foundation, either version 3 of the License, or (at\n"
 "// your option) any later version.\n"
 "//\n"
