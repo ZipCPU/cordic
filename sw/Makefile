@@ -24,6 +24,9 @@
 ##	basiccordic: Builds a polar to rectangular converter slash exponential
 ##		multiplier, and places it in the rtl/ directory
 ##
+##	quadtbl: Builds a sine-wave calculator based upon a quadratic table
+##		interpolation
+##
 ##	depends:	Caclulates dependencies, places a dependency file into
 ##		the obj-pc sub-directory
 ##
@@ -60,10 +63,10 @@ CXX  := g++
 OBJDIR := obj-pc
 VSRCD  := ../rtl
 SOURCES:= main.cpp cordiclib.cpp legal.cpp basiccordic.cpp topolar.cpp \
-	sintable.cpp
+	sintable.cpp quadtbl.cpp hexfile.cpp
 HEADERS:= $(wildcard $(subst .cpp,.h,$(SOURCES)))
 OBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
-VSRC   := topolar.v cordic.v sintable.v quarterwav.v
+VSRC   := topolar.v cordic.v sintable.v quarterwav.v quadtbl.v
 CFLAGS := -g -Og -Wall
 PROGRAMS:= gencordic
 all: $(PROGRAMS) $(VSRC)
@@ -79,6 +82,7 @@ gencordic: $(OBJECTS)
 	rm -f $(VSRCD)/cordic.v
 	rm -f $(VSRCD)/sintable.v
 	rm -f $(VSRCD)/quarterwav.v
+	rm -f $(VSRCD)/quadtbl.v
 	$(CXX) $(OBJECTS) -o $@
 
 .PHONY: topolar topolar.v
@@ -94,8 +98,8 @@ cordic: basiccordic
 cordic.v: basiccordic
 $(VSRCD)/cordic.v: gencordic
 	$(mk-rtldir)
-	./gencordic -f $(VSRCD)/cordic.v  -v -i 12 -o 12 -t p2r -x 2 -c
-	# ./gencordic -f $(VSRCD)/cordic.v  -v -i 24 -o 24 -t p2r -x 1 -c
+	# ./gencordic -f $(VSRCD)/cordic.v  -v -i 12 -o 12 -t p2r -x 2 -c
+	./gencordic -f $(VSRCD)/cordic.v  -v -i 24 -o 24 -t p2r -x 1 -c
 
 .PHONY: sintable sintable.v
 sintable: $(VSRCD)/sintable.v
@@ -111,6 +115,13 @@ $(VSRCD)/quarterwav.v: gencordic
 	$(mk-rtldir)
 	./gencordic -f $(VSRCD)/quarterwav.v  -v -p 14 -t qtr
 
+.PHONY: quadtbl quadtbl.v
+quadtbl: $(VSRCD)/quadtbl.v
+quadtbl.v: quadtbl
+$(VSRCD)/quadtbl.v: gencordic
+	$(mk-rtldir)
+	./gencordic -f $(VSRCD)/quadtbl.v -c -v -p 26 -o 24 -t qtbl
+
 .PHONY: clean
 clean:
 	rm -f $(PROGRAMS) tags
@@ -118,6 +129,7 @@ clean:
 	rm -f $(VSRCD)/topolar.v $(VSRCD)/cordic.v
 	rm -f $(VSRCD)/sintable.v $(VSRCD)/sintable.hex
 	rm -f $(VSRCD)/quarterwav.v $(VSRCD)/quarterwav.hex
+	rm -f $(VSRCD)/quadtbl.v $(VSRCD)/quadtbl_ctbl.hex $(VSRCD)/quadtbl_ltbl.hex $(VSRCD)/quadtbl_qtbl.hex
 
 
 define	mk-rtldir

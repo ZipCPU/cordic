@@ -25,6 +25,8 @@
 ##			conversion form of the cordic.  Prints success or
 ##			failure on the last line.
 ##
+##	quadtbl_tb:	Test the quadratic interpolation sinewave generator.
+##
 ##	test:	Runs all testbenches
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
@@ -55,7 +57,7 @@
 ################################################################################
 ##
 ##
-all: cordic_tb topolar_tb
+all: cordic_tb topolar_tb quadtbl_tb
 CXX  := g++
 RTLD := ../../rtl
 ROBJD:= $(RTLD)/obj_dir
@@ -66,6 +68,7 @@ INCS := -I$(VROOT)/include -I$(RTLD) -I$(ROBJD)
 VSRCS:= $(VROOT)/include/verilated.cpp $(VROOT)/include/verilated_vcd_c.cpp
 TBOBJ:= $(ROBJD)/Vcordic__ALL.a
 PLOBJ:= $(ROBJD)/Vtopolar__ALL.a
+QTOBJ:= $(ROBJD)/Vquadtbl__ALL.a
 CFLAGS:= -g -Og -Wall $(INCS)
 
 cordic_tb:	cordic_tb.cpp $(TBOBJ) $(ROBJD)/Vcordic.h testb.h fft.h fftw.c
@@ -74,10 +77,15 @@ cordic_tb:	cordic_tb.cpp $(TBOBJ) $(ROBJD)/Vcordic.h testb.h fft.h fftw.c
 topolar_tb:	topolar_tb.cpp $(PLOBJ) $(ROBJD)/Vtopolar.h testb.h
 	$(CXX) $(CFLAGS) topolar_tb.cpp $(VSRCS) $(PLOBJ) -o $@
 
+quadtbl_tb:	quadtbl_tb.cpp $(PLOBJ) $(ROBJD)/Vquadtbl.h testb.h fft.h fftw.c
+	$(CXX) $(CFLAGS) quadtbl_tb.cpp fftw.c $(VSRCS) $(QTOBJ) -lfftw3 -o $@
+
 test:	cordic_tb topolar_tb
 	./cordic_tb
 	./topolar_tb
+	./quadtbl_tb
 
 clean:
-	rm -f cordic_tb     topolar_tb
-	rm -f cordic_tb.vcd topolar_tb.vcd
+	rm -f cordic_tb     topolar_tb      quadtbl_tb
+	rm -f cordic_tb.vcd topolar_tb.vcd  quadtbl_tb.vcd
+

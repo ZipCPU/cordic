@@ -49,6 +49,7 @@
 #include "topolar.h"
 #include "basiccordic.h"
 #include "sintable.h"
+#include "quadtbl.h"
 
 void	usage(void) {
 	fprintf(stderr,
@@ -73,8 +74,9 @@ void	usage(void) {
 "\t\t\twhen I think of a cordic.  You can use this to create sin/cos\n"
 "\t\t\tfunctions, or even to multiply by a complex conjugate.\n"
 "\t\tr2p\tRectangular to polar coordinate conversion\n"
-"\t\tqtr\tQuarter-wave table lookup sinewave generator"
-"\t\ttbl\tStraight table lookup sinewave generator"
+"\t\tqtr\tQuarter-wave table lookup sinewave generator\n"
+"\t\tqtbl\tQuadratically interpolated sinewave generator\n"
+"\t\ttbl\tStraight table lookup sinewave generator\n"
 "\t-v\tTurns on any verbose outputting\n"
 "\t-x <xtrabits>\tUses this many extra bits in rectangular\n"
 "\t\t\tvalue processing\n");
@@ -86,7 +88,8 @@ int	main(int argc, char **argv) {
 	const char	*fname = NULL;
 	bool	with_reset = true, with_aux = true;
 	bool	polar_to_rect = false, rect_to_polar = true, verbose=false,
-		gen_sintable = false, gen_quarterwav = false, c_header = false;
+		gen_sintable = false, gen_quarterwav = false, c_header = false,
+		gen_quadtbl = false;
 	int	c;
 	FILE	*fp, *fhp;
 
@@ -141,6 +144,10 @@ int	main(int argc, char **argv) {
 				if (NULL == fname)
 					fname = "quarterwav.v";
 				gen_quarterwav = true;
+			} else if (strcmp(optarg, "qtbl")==0) {
+				if (NULL == fname)
+					fname = "quadtbl.v";
+				gen_quadtbl = true;
 			} else {
 				fprintf(stderr, "ERR: Unsupported cordic mode, %s\n", optarg);
 				exit(EXIT_FAILURE);
@@ -326,5 +333,45 @@ int	main(int argc, char **argv) {
 		}
 
 		quarterwav(fp, fname, phase_bits, ow, with_reset, with_aux);
+	} if (gen_quadtbl) {
+		if ((iw < 0)&&(ow > 0))
+			iw = ow;
+		if (ow < 0)
+			ow = iw;
+		if ((iw < 0)||(ow < 0)) {
+			fprintf(stderr, "WARNING: Assuming an input and output bit-width of %d bits\n", DEFAULT_BITWIDTH);
+			iw = DEFAULT_BITWIDTH;
+			ow = DEFAULT_BITWIDTH;
+		}
+		ww = (ow > iw) ? ow:iw;
+		nxtra += 1;
+		ww += nxtra;
+		if (phase_bits < 0)
+			phase_bits = calc_phase_bits(ww);
+		if (nstages < 0)
+			nstages = calc_stages(ww, phase_bits);
+
+		if (verbose) {
+			printf("Building a quadratically interpolated table based sine-wave calculator\n"
+			"\tOutput file     : %s\n"
+			// "\tInput  bits     : %2d\n"
+			"\tExtra  bits     : %2d (used in computation, dropped when done)\n"
+			"\tOutput bits     : %2d\n"
+			"\tPhase  bits     : %2d\n",
+			// "\tNumber of stages: %2d\n",
+			(fp == stdout)?"(stdout)":fname, // iw,
+			nxtra, ow, phase_bits);
+			if (with_reset)
+				printf("\tDesign will include a reset signal\n");
+			if (with_aux)
+				printf("\tAux bits will be added to the design\n");
+		}
+
+		/*
+		basiccordic(fp, fhp, fname,
+			nstages, iw, ow, nxtra, phase_bits,
+			with_reset, with_aux);
+		*/
+		quadtbl(fp, fhp, fname, phase_bits, ow, nxtra, with_reset, with_aux);
 	}
 }

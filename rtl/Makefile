@@ -43,11 +43,13 @@ all:	test
 FBDIR := .
 VDIRFB:= $(FBDIR)/obj_dir
 
-.PHONY: test
-test: $(VDIRFB)/Vtopolar__ALL.a
-test: $(VDIRFB)/Vcordic__ALL.a
-test: $(VDIRFB)/Vsintable__ALL.a
-test: $(VDIRFB)/Vquarterwav__ALL.a
+.PHONY: test topolar cordic sintable quarterwav quadtbl
+test: topolar cordic sintable quarterwav quadtbl
+topolar:    $(VDIRFB)/Vtopolar__ALL.a
+cordic:     $(VDIRFB)/Vcordic__ALL.a
+sintable:   $(VDIRFB)/Vsintable__ALL.a
+quarterwav: $(VDIRFB)/Vquarterwav__ALL.a
+quadtbl:    $(VDIRFB)/Vquadtbl__ALL.a
 VOBJ := obj_dir
 SUBMAKE := $(MAKE) --no-print-directory --directory=$(VOBJ) -f
 ifeq ($(VERILATOR_ROOT),)
@@ -72,6 +74,10 @@ $(VDIRFB)/Vsintable.h $(VDIRFB)/Vsintable.cpp $(VDIRFB)/Vsintable.mk: sintable.v
 $(VDIRFB)/Vquarterwav__ALL.a: $(VDIRFB)/Vquarterwav.h $(VDIRFB)/Vquarterwav.cpp
 $(VDIRFB)/Vquarterwav__ALL.a: $(VDIRFB)/Vquarterwav.mk
 $(VDIRFB)/Vquarterwav.h $(VDIRFB)/Vquarterwav.cpp $(VDIRFB)/Vquarterwav.mk: quarterwav.v
+
+$(VDIRFB)/Vquadtbl__ALL.a: $(VDIRFB)/Vquadtbl.h $(VDIRFB)/Vquadtbl.cpp
+$(VDIRFB)/Vquadtbl__ALL.a: $(VDIRFB)/Vquadtbl.mk
+$(VDIRFB)/Vquadtbl.h $(VDIRFB)/Vquadtbl.cpp $(VDIRFB)/Vquadtbl.mk: quadtbl.v
 
 $(VDIRFB)/V%.cpp $(VDIRFB)/V%.h $(VDIRFB)/V%.mk: $(FBDIR)/%.v
 	$(VERILATOR) $(VFLAGS) $*.v
