@@ -251,9 +251,9 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 		fprintf(fp,
 			"\t// Round our magnitude towards even\n"
 			"\twire\t[(WW-1):0]\tpre_mag;\n\n"
-			"\tassign\tpre_mag = xv[NSTAGES] + {{(OW){1\'b0}},\n"
+			"\tassign\tpre_mag = xv[NSTAGES] + $signed({{(OW){1\'b0}},\n"
 				"\t\t\t\txv[NSTAGES][(WW-OW)],\n"
-				"\t\t\t\t{(WW-OW-1){!xv[NSTAGES][WW-OW]}}};\n"
+				"\t\t\t\t{(WW-OW-1){!xv[NSTAGES][WW-OW]}}});\n"
 			"\n");
 		fprintf(fp,
 			"\talways @(posedge i_clk)\n"

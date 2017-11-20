@@ -18,7 +18,7 @@
 // Copyright (C) 2017, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -193,9 +193,9 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 	// Round our magnitude towards even
 	wire	[(WW-1):0]	pre_mag;
 
-	assign	pre_mag = xv[NSTAGES] + {{(OW){1'b0}},
+	assign	pre_mag = xv[NSTAGES] + $signed({{(OW){1'b0}},
 				xv[NSTAGES][(WW-OW)],
-				{(WW-OW-1){!xv[NSTAGES][WW-OW]}}};
+				{(WW-OW-1){!xv[NSTAGES][WW-OW]}}});
 
 	always @(posedge i_clk)
 	if (i_ce)
