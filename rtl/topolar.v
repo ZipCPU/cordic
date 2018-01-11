@@ -84,19 +84,19 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 	reg		[(NSTAGES):0]	ax;
 
 	always @(posedge i_clk)
-		if (i_reset)
-			ax <= {(NSTAGES+1){1'b0}};
-		else if (i_ce)
-			ax <= { ax[(NSTAGES-1):0], i_aux };
+	if (i_reset)
+		ax <= {(NSTAGES+1){1'b0}};
+	else if (i_ce)
+		ax <= { ax[(NSTAGES-1):0], i_aux };
 
 	// First stage, map to within +/- 45 degrees
 	always @(posedge i_clk)
-		if (i_reset)
-		begin
-			xv[0] <= 0;
-			yv[0] <= 0;
-			ph[0] <= 0;
-		end else if (i_ce)
+	if (i_reset)
+	begin
+		xv[0] <= 0;
+		yv[0] <= 0;
+		ph[0] <= 0;
+	end else if (i_ce)
 		case({i_xval[IW-1], i_yval[IW-1]})
 		2'b01: begin // Rotate by -315 degrees
 			xv[0] <=  e_xval - e_yval;
@@ -198,7 +198,12 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 				{(WW-OW-1){!xv[NSTAGES][WW-OW]}}});
 
 	always @(posedge i_clk)
-	if (i_ce)
+	if (i_reset)
+	begin
+		o_mag   <= 0;
+		o_phase <= 0;
+		o_aux <= 0;
+	end else if (i_ce)
 	begin
 		o_mag   <= pre_mag[(WW-1):(WW-OW)];
 		o_phase <= ph[NSTAGES];

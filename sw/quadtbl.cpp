@@ -259,7 +259,7 @@ void	build_quadtbls(const char *fname, const int lgsz, const int wid,
 }
 
 void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
-		int nxtra, bool with_reset, bool with_aux) {
+		int nxtra, bool with_reset, bool with_aux, bool async_reset) {
 	const	char	*name;
 	char	*noext;
 	int	lgtbl = pick_tbl_size(ow+nxtra);
@@ -291,10 +291,10 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 
 	printf("Rpt-Err: %f\n", tblerr);
 	const	char PURPOSE[] =
-	"This is a sine-wave table lookup algorithm, coupled with a quadratic\n"
-	"//\t\tinterpolation of the result.  It's purpose is both to trade\n"
-	"//\toff logic, as well as to lower the phase noise associated with\n"
-	"//\tany phase truncation.\n",
+	"This is a sine-wave table lookup algorithm, coupled with a\n"
+	"//\t\tquadratic interpolation of the result.  It's purpose is both\n"
+	"//\t to trade off logic, as well as to lower the phase noise associated\n"
+	"//\twith any phase truncation.",
 		HPURPOSE[] =
 	"This .h file notes the default parameter values from\n"
 	"//\t\twithin the generated file.  It is used to communicate\n"
@@ -309,21 +309,33 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 		ww = ow;
 	ww += nxtra;
 
+	std::string	resetw = (!with_reset) ? ""
+			: (async_reset) ? "i_areset_n" : "i_reset";
+	std::string	always_reset;
+	if ((with_reset)&&(async_reset))
+		always_reset = "\talways @(posedge i_clk, negedge i_areset_n)\n"
+			"\tif (!i_areset_n)\n";
+	else if (with_reset)
+		always_reset = "\talways @(posedge i_clk)\n"
+			"\tif (i_reset)\n";
+	else
+		always_reset = "\talways @(posedge i_clk)\n\t";
+
 	fprintf(fp, "`default_nettype\tnone\n//\n");
 	fprintf(fp,
-		"module	%s(i_clk, %si_ce, %si_phase, o_sin%s);\n"
+		"module	%s(i_clk, %s%si_ce, %si_phase, o_sin%s);\n"
 		"\tlocalparam\tPW=%2d,\t// Bits in our phase variable\n"
 		"\t\t\tOW=%2d,  // The number of output bits to produce\n"
 		"\t\t\tXTRA=%2d;// Extra bits for internal precision\n"
-		"\tinput\twire\t\t\t\ti_clk, %si_ce%s;\n"
+		"\tinput\twire\t\t\t\ti_clk, %s%si_ce%s;\n"
 		"\t//\n"
 		"\tinput\twire\tsigned\t[(PW-1):0]\ti_phase;\n"
 		"\toutput\treg\tsigned\t[(OW-1):0]\to_sin;\n",
-		name, (with_reset)?"i_reset, ":"",
+		name, resetw.c_str(), (with_reset)?", ":"",
 		(with_aux)?" i_aux,":"",
 		(with_aux)?", o_aux":"",
 		phase_bits, ow, nxtra,
-		(with_reset)?"i_reset, ":"",
+		resetw.c_str(), (with_reset)?", ":"",
 		(with_aux)?", i_aux":"");
 
 
@@ -377,29 +389,51 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 
 	fprintf(fp,
 	"\t// aux bit\n"
-	"\tlocalparam	NSTAGES=%d;\n"
-	"\treg	[(NSTAGES-1):0]	aux;\n"
-	"\tinitial	aux = 0;\n"
-	"\talways @(posedge i_clk)\n"
-		"\t\tif (i_reset)\n"
-			"\t\t\taux <= 0;\n"
-		"\t\telse if (i_ce)\n"
+	"\tlocalparam	NSTAGES=%d;\n",
+			(NO_QUADRATIC_COMPONENT)?4:6);
+
+	if (with_aux) {
+		fprintf(fp,
+		"\treg	[(NSTAGES-1):0]	aux;\n"
+		"\tinitial	aux = 0;\n");
+
+		fprintf(fp, "%s", always_reset.c_str());
+
+		if (with_reset)
+			fprintf(fp,
+			"\t\taux <= 0;\n"
+			"\telse ");
+	
+		fprintf(fp,
+		"if (i_ce)\n"
 			"\t\t\taux <= { aux[(NSTAGES-2):0], i_aux };\n"
-		"\tassign	o_aux = aux[(NSTAGES-1)];\n\n",
-		(NO_QUADRATIC_COMPONENT)?4:6);
+			"\tassign	o_aux = aux[(NSTAGES-1)];\n\n");
+	}
+
+	fprintf(fp, "\t// Clock zero\n");
+	fprintf(fp, "%s", always_reset.c_str());
+
+	if (with_reset) {
+		fprintf(fp, "\tbegin\n");
+		if (!NO_QUADRATIC_COMPONENT)
+			fprintf(fp, "\t\tqv <= 0;\n");
+		fprintf(fp,
+			"\t\tlv <= 0;\n"
+			"\t\tcv <= 0;\n"
+			"\t\tdx <= 0;\n"
+			"\tend else ");
+	}
 
 	fprintf(fp,
-	"\t// Clock zero\n"
-	"\talways @(posedge i_clk)\n"
-	"\t\tif (i_ce)\n"
-	"\t\tbegin\n");
+	"if (i_ce)\n"
+	"\tbegin\n");
 	if (!NO_QUADRATIC_COMPONENT)
-		fprintf(fp,"\t\t\tqv <= qtbl[i_phase[(PW-1):(DXBITS-1)]];\n");
+		fprintf(fp,"\t\tqv <= qtbl[i_phase[(PW-1):(DXBITS-1)]];\n");
 	fprintf(fp,
-	"\t\t\tlv <= ltbl[i_phase[(PW-1):(DXBITS-1)]];\n"
-	"\t\t\tcv <= ctbl[i_phase[(PW-1):(DXBITS-1)]];\n"
-	"\t\t\tdx <= { 1'b0, i_phase[(DXBITS-2):0] };	// * 2^(-PW)\n"
-	"\t\tend\n\n");
+	"\t\tlv <= ltbl[i_phase[(PW-1):(DXBITS-1)]];\n"
+	"\t\tcv <= ctbl[i_phase[(PW-1):(DXBITS-1)]];\n"
+	"\t\tdx <= { 1'b0, i_phase[(DXBITS-2):0] };	// * 2^(-PW)\n"
+	"\tend\n\n");
 
 	fprintf(fp,
 	"\t//\n"
@@ -417,27 +451,46 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 		(NO_QUADRATIC_COMPONENT) ? "":"Q, ");
 
 	if (!NO_QUADRATIC_COMPONENT) {
-	fprintf(fp,
-	"\t// Clock 1\n"
-	"\treg\tsigned\t[(QBITS+DXBITS-1):0]	qprod; // [%d:%d]\n"
-	"\talways @(posedge i_clk)\n"
-		"\t\tif (i_reset)\n"
-			"\t\t\tqprod <= 0;\n"
-		"\t\telse if (i_ce)\n"
-			"\t\t\tqprod <= qv * dx; // %d bits\n\n",
-				qbits+dxbits-1, 0, qbits+dxbits);
+		fprintf(fp,
+		"\t// Clock 1\n"
+		"\treg\tsigned\t[(QBITS+DXBITS-1):0]	qprod; // [%d:%d]\n",
+				qbits+dxbits-1, 0);
+
+		fprintf(fp, "%s", always_reset.c_str());
+
+		if (with_reset)
+			fprintf(fp,
+			"\t\tqprod <= 0;\n"
+			"\telse ");
+
+		fprintf(fp,
+		" if (i_ce)\n"
+			"\t\tqprod <= qv * dx; // %d bits\n\n",
+				qbits+dxbits);
+	}
 
 	fprintf(fp,
 	"\tinitial	cv_1 = 0;\n"
 	"\tinitial	lv_1 = 0;\n"
-	"\tinitial	dx_1 = 0;\n"
-	"\talways @(posedge i_clk)\n"
-		"\t\tif (i_ce) begin\n"
-			"\t\t\tcv_1 <= cv;\n"
-			"\t\t\tlv_1 <= lv;\n"
-			"\t\t\tdx_1 <= dx;\n"
-		"\t\tend\n\n");
+	"\tinitial	dx_1 = 0;\n");
+
+	fprintf(fp, "%s", always_reset.c_str());
+
+	if (with_reset) {
+		fprintf(fp,
+		"\tbegin\n"
+			"\t\tcv_1 <= 0;\n"
+			"\t\tlv_1 <= 0;\n"
+			"\t\tdx_1 <= 0;\n"
+		"\tend else ");
 	}
+
+	fprintf(fp,
+		"if (i_ce) begin\n"
+			"\t\tcv_1 <= cv;\n"
+			"\t\tlv_1 <= lv;\n"
+			"\t\tdx_1 <= dx;\n"
+		"\tend\n\n");
 
 	if (!NO_QUADRATIC_COMPONENT) {
 		fprintf(fp,
@@ -456,37 +509,56 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 			"\t\t\t= qprod[(QBITS+DXBITS-1):(DXBITS-1)]; // [%d:%d]\n",
 			qbits+1,qbits+dxbits-1, dxbits-1);
 
-		fprintf(fp,
-		"\talways @(posedge i_clk)\n"
-			"\t\tif (i_ce)\n"
-				"\t\t\tlsum <= w_qprod + lv%s; // %d bits\n\n",
-				(NO_QUADRATIC_COMPONENT)?"":"_1", lbits+1);
+		fprintf(fp, "%s", always_reset.c_str());
+		if (with_reset)
+			fprintf(fp, "\t\tlsum <= 0;\n\telse ");
 
 		fprintf(fp,
-		"\talways @(posedge i_clk)\n"
-			"\t\tif (i_ce) begin\n"
-				"\t\t\tcv_2 <= cv_1;\n"
-				"\t\t\tdx_2 <= dx_1;\n"
-			"\t\tend\n\n");
+			"if (i_ce)\n"
+				"\t\tlsum <= w_qprod + lv%s; // %d bits\n\n",
+				(NO_QUADRATIC_COMPONENT)?"":"_1", lbits+1);
+
+		fprintf(fp, "%s", always_reset.c_str());
+		fprintf(fp,
+			"\tbegin\n"
+			"\t\tcv_2 <= 0;\n"
+			"\t\tdx_2 <= 0;\n"
+			"\tend else ");
+		fprintf(fp,
+			"if (i_ce) begin\n"
+				"\t\tcv_2 <= cv_1;\n"
+				"\t\tdx_2 <= dx_1;\n"
+			"\tend\n\n");
 	}
 
 	fprintf(fp,
 	"\t// Clock %d\n"
-	"\treg\tsigned\t[(LBITS+DXBITS-1):0]\tlprod;\n"
-	"\talways @(posedge i_clk)\n"
-		"\t\tif (i_ce)\n"
-			"\t\t\tlprod <= %s * dx%s; // %d bits\n\n",
-			(NO_QUADRATIC_COMPONENT)?1:2,
+	"\treg\tsigned\t[(LBITS+DXBITS-1):0]\tlprod;\n",
+			(NO_QUADRATIC_COMPONENT)?1:2);
+	fprintf(fp, "%s", always_reset.c_str());
+	if (with_reset)
+		fprintf(fp,
+			"\t\tlprod <= 0;\n"
+			"\telse ");
+	fprintf(fp,
+		"if (i_ce)\n"
+			"\t\tlprod <= %s * dx%s; // %d bits\n\n",
 			(NO_QUADRATIC_COMPONENT)?"lv":"lsum",
 			(NO_QUADRATIC_COMPONENT)?"":"_2",
 			lbits+dxbits+1);
 
+	fprintf(fp, "\tinitial	cv_%d = 0;\n",
+			(NO_QUADRATIC_COMPONENT)?1:3);
+
+
+	fprintf(fp, "%s", always_reset.c_str());
+	if (with_reset)
+		fprintf(fp, "\t\tcv_%d <= 0;\n"
+		"\telse ",
+			(NO_QUADRATIC_COMPONENT)?1:3);
 	fprintf(fp,
-	"\tinitial	cv_%d = 0;\n"
-	"\talways @(posedge i_clk)\n"
-		"\t\tif (i_ce)\n"
-			"\t\t\tcv_%d <= cv%s;\n\n",
-			(NO_QUADRATIC_COMPONENT)?1:3,
+		"if (i_ce)\n"
+			"\t\tcv_%d <= cv%s;\n\n",
 			(NO_QUADRATIC_COMPONENT)?1:3,
 			(NO_QUADRATIC_COMPONENT)?"":"_2");
 
@@ -519,10 +591,15 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 */
 
 	fprintf(fp,
-	"\tinitial	r_value = 0;\n"
-	"\talways @(posedge i_clk)\n"
-		"\t\tif (i_ce)\n"
-			"\t\t\tr_value <= w_lprod + cv_%d;\n\n",
+	"\tinitial	r_value = 0;\n");
+	fprintf(fp, "%s", always_reset.c_str());
+
+	if (with_reset)
+		fprintf(fp, "\t\tr_value <= 0;\n"
+			"\telse ");
+
+	fprintf(fp, "if (i_ce)\n"
+			"\t\tr_value <= w_lprod + cv_%d;\n\n",
 			(NO_QUADRATIC_COMPONENT)?1:3);
 
 	fprintf(fp,
@@ -539,11 +616,16 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 				"\t\t\t\tr_value[(WW-OW)],\n"
 				"\t\t\t\t{(WW-OW-1){!r_value[(WW-OW)]}} };\n"
 	"\t// verilator lint_on  UNUSED\n"
-	"\tinitial	o_sin = 0;\n"
-	"\talways @(posedge i_clk)\n"
-		"\t\tif (i_ce)\n"
-			"\t\t\to_sin <= w_value[(WW-1):XTRA]; // [%d:%d]\n\n",
-			(NO_QUADRATIC_COMPONENT)?3:5,
+	"\tinitial	o_sin = 0;\n",
+			(NO_QUADRATIC_COMPONENT)?3:5);
+
+	fprintf(fp, "%s", always_reset.c_str());
+	if (with_reset)
+		fprintf(fp, "\t\to_sin <= 0;\n\telse ");
+
+	fprintf(fp,
+		"if (i_ce)\n"
+			"\t\to_sin <= w_value[(WW-1):XTRA]; // [%d:%d]\n\n",
 			ww, nxtra);
 
 	fprintf(fp,

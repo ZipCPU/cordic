@@ -56,14 +56,14 @@ module	sintable(i_clk, i_reset, i_ce, i_aux, i_phase, o_val, o_aux);
 	initial	$readmemh("sintable.hex", tbl);
 
 	always @(posedge i_clk)
-		if (i_reset)
-			o_val <= 0;
-		else if (i_ce)
-			o_val <= tbl[i_phase];
+	if (i_reset)
+		o_val <= 0;
+	else if (i_ce)
+		o_val <= tbl[i_phase];
 
 	always @(posedge i_clk)
-		if (i_reset)
-			o_aux <= 0;
-		else if (i_ce)
-			o_aux <= i_aux;
+	if (i_reset)
+		o_aux <= 0;
+	else if (i_ce)
+		o_aux <= i_aux;
 endmodule

@@ -43,6 +43,7 @@
 extern	void	topolar(FILE *fp, FILE *fhp, const char *fname,
 			int nstages, int iw, int ow, int nxtra,
 			int phase_bits=32,
-			bool with_reset=true, bool with_aux = true);
+			bool with_reset=true, bool with_aux = true,
+			bool async_reset = false);
 
 #endif	// TOPOLAR_H

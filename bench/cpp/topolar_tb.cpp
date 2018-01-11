@@ -50,7 +50,13 @@ public:
 
 	TOPOLAR_TB(void) {
 		m_debug = true;
+#ifdef	WITH_RESET
+#ifdef	ASYNC_RESET
+		m_core->i_areset_n = 0;
+#else
 		m_core->i_reset = 1;
+#endif
+#endif
 		m_core->i_ce    = 1;
 		m_core->i_xval  = 0;
 		m_core->i_yval  = 0;

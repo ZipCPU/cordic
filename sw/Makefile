@@ -69,6 +69,7 @@ OBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
 VSRC   := topolar.v cordic.v sintable.v quarterwav.v quadtbl.v
 CFLAGS := -g -Og -Wall
 PROGRAMS:= gencordic
+CRDCARGS := -v -c
 all: $(PROGRAMS) $(VSRC)
 INCS :=
 
@@ -90,7 +91,7 @@ topolar: $(VSRCD)/topolar.v
 topolar.v: topolar
 $(VSRCD)/topolar.v: gencordic
 	$(mk-rtldir)
-	./gencordic -f $(VSRCD)/topolar.v -v -i 12 -o 12 -t r2p -x 1 -c
+	./gencordic $(CRDCARGS) -f $(VSRCD)/topolar.v -i 12 -o 12 -t r2p -x 1
 
 .PHONY: basiccordic cordic.v cordic
 basiccordic: $(VSRCD)/cordic.v
@@ -98,29 +99,29 @@ cordic: basiccordic
 cordic.v: basiccordic
 $(VSRCD)/cordic.v: gencordic
 	$(mk-rtldir)
-	# ./gencordic -f $(VSRCD)/cordic.v  -v -i 12 -o 12 -t p2r -x 2 -c
-	./gencordic -f $(VSRCD)/cordic.v  -v -i 24 -o 24 -t p2r -x 1 -c
+	./gencordic -f $(VSRCD)/cordic.v  -v -i 12 -o 12 -t p2r -x 2 -c
+	# ./gencordic $(CRDCARGS) -f $(VSRCD)/cordic.v -i 24 -o 24 -t p2r -x 1
 
 .PHONY: sintable sintable.v
 sintable: $(VSRCD)/sintable.v
 sintable.v: sintable
 $(VSRCD)/sintable.v: gencordic
 	$(mk-rtldir)
-	./gencordic -f $(VSRCD)/sintable.v  -v -o 12 -t tbl
+	./gencordic $(CRDCARGS) -f $(VSRCD)/sintable.v -o 12 -t tbl
 
 .PHONY: quarterwav quarterwav.v
 quarterwav: $(VSRCD)/quarterwav.v
 quarterwav.v: quarterwav
 $(VSRCD)/quarterwav.v: gencordic
 	$(mk-rtldir)
-	./gencordic -f $(VSRCD)/quarterwav.v  -v -p 14 -t qtr
+	./gencordic $(CRDCARGS) -f $(VSRCD)/quarterwav.v -p 14 -t qtr
 
 .PHONY: quadtbl quadtbl.v
 quadtbl: $(VSRCD)/quadtbl.v
 quadtbl.v: quadtbl
 $(VSRCD)/quadtbl.v: gencordic
 	$(mk-rtldir)
-	./gencordic -f $(VSRCD)/quadtbl.v -c -v -p 26 -o 24 -t qtbl
+	./gencordic $(CRDCARGS) -f $(VSRCD)/quadtbl.v -p 26 -o 24 -t qtbl
 
 .PHONY: clean
 clean:

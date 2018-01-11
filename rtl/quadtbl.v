@@ -4,11 +4,10 @@
 //
 // Project:	A series of CORDIC related projects
 //
-// Purpose:	This is a sine-wave table lookup algorithm, coupled with a quadratic
-//		interpolation of the result.  It's purpose is both to trade
-//	off logic, as well as to lower the phase noise associated with
-//	any phase truncation.
-
+// Purpose:	This is a sine-wave table lookup algorithm, coupled with a
+//		quadratic interpolation of the result.  It's purpose is both
+//	 to trade off logic, as well as to lower the phase noise associated
+//	with any phase truncation.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -81,21 +80,27 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	reg	[(NSTAGES-1):0]	aux;
 	initial	aux = 0;
 	always @(posedge i_clk)
-		if (i_reset)
-			aux <= 0;
-		else if (i_ce)
+	if (i_reset)
+		aux <= 0;
+	else if (i_ce)
 			aux <= { aux[(NSTAGES-2):0], i_aux };
 	assign	o_aux = aux[(NSTAGES-1)];
 
 	// Clock zero
 	always @(posedge i_clk)
-		if (i_ce)
-		begin
-			qv <= qtbl[i_phase[(PW-1):(DXBITS-1)]];
-			lv <= ltbl[i_phase[(PW-1):(DXBITS-1)]];
-			cv <= ctbl[i_phase[(PW-1):(DXBITS-1)]];
-			dx <= { 1'b0, i_phase[(DXBITS-2):0] };	// * 2^(-PW)
-		end
+	if (i_reset)
+	begin
+		qv <= 0;
+		lv <= 0;
+		cv <= 0;
+		dx <= 0;
+	end else if (i_ce)
+	begin
+		qv <= qtbl[i_phase[(PW-1):(DXBITS-1)]];
+		lv <= ltbl[i_phase[(PW-1):(DXBITS-1)]];
+		cv <= ctbl[i_phase[(PW-1):(DXBITS-1)]];
+		dx <= { 1'b0, i_phase[(DXBITS-2):0] };	// * 2^(-PW)
+	end
 
 	//
 	// Here's our formula:
@@ -108,20 +113,25 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	// Clock 1
 	reg	signed	[(QBITS+DXBITS-1):0]	qprod; // [29:0]
 	always @(posedge i_clk)
-		if (i_reset)
-			qprod <= 0;
-		else if (i_ce)
-			qprod <= qv * dx; // 30 bits
+	if (i_reset)
+		qprod <= 0;
+	else  if (i_ce)
+		qprod <= qv * dx; // 30 bits
 
 	initial	cv_1 = 0;
 	initial	lv_1 = 0;
 	initial	dx_1 = 0;
 	always @(posedge i_clk)
-		if (i_ce) begin
-			cv_1 <= cv;
-			lv_1 <= lv;
-			dx_1 <= dx;
-		end
+	if (i_reset)
+	begin
+		cv_1 <= 0;
+		lv_1 <= 0;
+		dx_1 <= 0;
+	end else if (i_ce) begin
+		cv_1 <= cv;
+		lv_1 <= lv;
+		dx_1 <= dx;
+	end
 
 	// Clock 2
 	reg	signed [(LBITS-1):0]	lsum;
@@ -130,25 +140,35 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	assign	w_qprod[QBITS:0] // 15
 			= qprod[(QBITS+DXBITS-1):(DXBITS-1)]; // [29:15]
 	always @(posedge i_clk)
-		if (i_ce)
-			lsum <= w_qprod + lv_1; // 22 bits
+	if (i_reset)
+		lsum <= 0;
+	else if (i_ce)
+		lsum <= w_qprod + lv_1; // 22 bits
 
 	always @(posedge i_clk)
-		if (i_ce) begin
-			cv_2 <= cv_1;
-			dx_2 <= dx_1;
-		end
+	if (i_reset)
+	begin
+		cv_2 <= 0;
+		dx_2 <= 0;
+	end else if (i_ce) begin
+		cv_2 <= cv_1;
+		dx_2 <= dx_1;
+	end
 
 	// Clock 2
 	reg	signed	[(LBITS+DXBITS-1):0]	lprod;
 	always @(posedge i_clk)
-		if (i_ce)
-			lprod <= lsum * dx_2; // 38 bits
+	if (i_reset)
+		lprod <= 0;
+	else if (i_ce)
+		lprod <= lsum * dx_2; // 38 bits
 
 	initial	cv_3 = 0;
 	always @(posedge i_clk)
-		if (i_ce)
-			cv_3 <= cv_2;
+	if (i_reset)
+		cv_3 <= 0;
+	else if (i_ce)
+		cv_3 <= cv_2;
 
 	// Clock 4
 	reg	signed	[(CBITS-1):0]		r_value; // 27 bits
@@ -157,8 +177,10 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	assign	w_lprod[(LBITS):0] = lprod[(LBITS+DXBITS-1):(DXBITS-1)]; // 21 bits
 	initial	r_value = 0;
 	always @(posedge i_clk)
-		if (i_ce)
-			r_value <= w_lprod + cv_3;
+	if (i_reset)
+		r_value <= 0;
+	else if (i_ce)
+		r_value <= w_lprod + cv_3;
 
 	// Clock 5 - round the output
 	// verilator lint_off UNUSED
@@ -175,8 +197,10 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	// verilator lint_on  UNUSED
 	initial	o_sin = 0;
 	always @(posedge i_clk)
-		if (i_ce)
-			o_sin <= w_value[(WW-1):XTRA]; // [30:3]
+	if (i_reset)
+		o_sin <= 0;
+	else if (i_ce)
+		o_sin <= w_value[(WW-1):XTRA]; // [30:3]
 
 	// Make verilator happy
 	// verilator lint_off UNUSED

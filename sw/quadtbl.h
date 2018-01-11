@@ -44,6 +44,6 @@ extern	void	build_quadtbls(const char *fname,
 		int &cbits, int &lbits, int &qbits, double &tblerr);
 extern	void	quadtbl(FILE *fp, FILE *fhp, const char *fname,
 		int phase_bits, int ow, int nxtra,
-		bool with_reset, bool with_aux);
+		bool with_reset, bool with_aux, bool async_reset);
 
 #endif

@@ -43,12 +43,12 @@
 //
 module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 		o_xval, o_yval, o_aux);
-	localparam	IW=24,	// The number of bits in our inputs
-			OW=24,	// The number of output bits to produce
-			NSTAGES=26,
-			XTRA= 2,// Extra bits for internal precision
-			WW=26,	// Our working bit-width
-			PW=30;	// Bits in our phase variables
+	localparam	IW=12,	// The number of bits in our inputs
+			OW=12,	// The number of output bits to produce
+			NSTAGES=15,
+			XTRA= 3,// Extra bits for internal precision
+			WW=15,	// Our working bit-width
+			PW=19;	// Bits in our phase variables
 	input	wire				i_clk, i_reset, i_ce;
 	input	wire	signed	[(IW-1):0]		i_xval, i_yval;
 	input	wire		[(PW-1):0]			i_phase;
@@ -84,10 +84,10 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 	reg		[(NSTAGES):0]	ax;
 
 	always @(posedge i_clk)
-		if (i_reset)
-			ax <= {(NSTAGES+1){1'b0}};
-		else if (i_ce)
-			ax <= { ax[(NSTAGES-1):0], i_aux };
+	if (i_reset)
+		ax <= {(NSTAGES+1){1'b0}};
+	else if (i_ce)
+		ax <= { ax[(NSTAGES-1):0], i_aux };
 
 	// First stage, get rid of all but 45 degrees
 	//	The resulting phase needs to be between -45 and 45
@@ -111,32 +111,32 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 		3'b001: begin	// 45 .. 90
 			xv[0] <= -e_yval;
 			yv[0] <= e_xval;
-			ph[0] <= i_phase - 30'h10000000;
+			ph[0] <= i_phase - 19'h20000;
 			end
 		3'b010: begin	// 90 .. 135
 			xv[0] <= -e_yval;
 			yv[0] <= e_xval;
-			ph[0] <= i_phase - 30'h10000000;
+			ph[0] <= i_phase - 19'h20000;
 			end
 		3'b011: begin	// 135 .. 180
 			xv[0] <= -e_xval;
 			yv[0] <= -e_yval;
-			ph[0] <= i_phase - 30'h20000000;
+			ph[0] <= i_phase - 19'h40000;
 			end
 		3'b100: begin	// 180 .. 225
 			xv[0] <= -e_xval;
 			yv[0] <= -e_yval;
-			ph[0] <= i_phase - 30'h20000000;
+			ph[0] <= i_phase - 19'h40000;
 			end
 		3'b101: begin	// 225 .. 270
 			xv[0] <= e_yval;
 			yv[0] <= -e_xval;
-			ph[0] <= i_phase - 30'h30000000;
+			ph[0] <= i_phase - 19'h60000;
 			end
 		3'b110: begin	// 270 .. 315
 			xv[0] <= e_yval;
 			yv[0] <= -e_xval;
-			ph[0] <= i_phase - 30'h30000000;
+			ph[0] <= i_phase - 19'h60000;
 			end
 		3'b111: begin	// 315 .. 360, No change
 			xv[0] <= e_xval;
@@ -155,38 +155,27 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 	// the needs of our problem, specifically the number of stages and
 	// the number of bits required in our phase accumulator
 	//
-	wire	[29:0]	cordic_angle [0:(NSTAGES-1)];
+	wire	[18:0]	cordic_angle [0:(NSTAGES-1)];
 
-	assign	cordic_angle[ 0] = 30'h04b9_0147; //  26.565051 deg
-	assign	cordic_angle[ 1] = 30'h027e_ce16; //  14.036243 deg
-	assign	cordic_angle[ 2] = 30'h0144_4475; //   7.125016 deg
-	assign	cordic_angle[ 3] = 30'h00a2_c350; //   3.576334 deg
-	assign	cordic_angle[ 4] = 30'h0051_75f8; //   1.789911 deg
-	assign	cordic_angle[ 5] = 30'h0028_bd87; //   0.895174 deg
-	assign	cordic_angle[ 6] = 30'h0014_5f15; //   0.447614 deg
-	assign	cordic_angle[ 7] = 30'h000a_2f94; //   0.223811 deg
-	assign	cordic_angle[ 8] = 30'h0005_17cb; //   0.111906 deg
-	assign	cordic_angle[ 9] = 30'h0002_8be6; //   0.055953 deg
-	assign	cordic_angle[10] = 30'h0001_45f3; //   0.027976 deg
-	assign	cordic_angle[11] = 30'h0000_a2f9; //   0.013988 deg
-	assign	cordic_angle[12] = 30'h0000_517c; //   0.006994 deg
-	assign	cordic_angle[13] = 30'h0000_28be; //   0.003497 deg
-	assign	cordic_angle[14] = 30'h0000_145f; //   0.001749 deg
-	assign	cordic_angle[15] = 30'h0000_0a2f; //   0.000874 deg
-	assign	cordic_angle[16] = 30'h0000_0517; //   0.000437 deg
-	assign	cordic_angle[17] = 30'h0000_028b; //   0.000219 deg
-	assign	cordic_angle[18] = 30'h0000_0145; //   0.000109 deg
-	assign	cordic_angle[19] = 30'h0000_00a2; //   0.000055 deg
-	assign	cordic_angle[20] = 30'h0000_0051; //   0.000027 deg
-	assign	cordic_angle[21] = 30'h0000_0028; //   0.000014 deg
-	assign	cordic_angle[22] = 30'h0000_0014; //   0.000007 deg
-	assign	cordic_angle[23] = 30'h0000_000a; //   0.000003 deg
-	assign	cordic_angle[24] = 30'h0000_0005; //   0.000002 deg
-	assign	cordic_angle[25] = 30'h0000_0002; //   0.000001 deg
+	assign	cordic_angle[ 0] = 19'h0_9720; //  26.565051 deg
+	assign	cordic_angle[ 1] = 19'h0_4fd9; //  14.036243 deg
+	assign	cordic_angle[ 2] = 19'h0_2888; //   7.125016 deg
+	assign	cordic_angle[ 3] = 19'h0_1458; //   3.576334 deg
+	assign	cordic_angle[ 4] = 19'h0_0a2e; //   1.789911 deg
+	assign	cordic_angle[ 5] = 19'h0_0517; //   0.895174 deg
+	assign	cordic_angle[ 6] = 19'h0_028b; //   0.447614 deg
+	assign	cordic_angle[ 7] = 19'h0_0145; //   0.223811 deg
+	assign	cordic_angle[ 8] = 19'h0_00a2; //   0.111906 deg
+	assign	cordic_angle[ 9] = 19'h0_0051; //   0.055953 deg
+	assign	cordic_angle[10] = 19'h0_0028; //   0.027976 deg
+	assign	cordic_angle[11] = 19'h0_0014; //   0.013988 deg
+	assign	cordic_angle[12] = 19'h0_000a; //   0.006994 deg
+	assign	cordic_angle[13] = 19'h0_0005; //   0.003497 deg
+	assign	cordic_angle[14] = 19'h0_0002; //   0.001749 deg
 	// Std-Dev    : 0.00 (Units)
-	// Phase Quantization: 0.000000 (Radians)
+	// Phase Quantization: 0.000030 (Radians)
 	// Gain is 1.164435
-	// You can annihilate this gain by multiplying by 32'hdbd95b16
+	// You can annihilate this gain by multiplying by 32'hdbd95b17
 	// and right shifting by 32 bits.
 
 	genvar	i;
@@ -238,6 +227,11 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 				{(WW-OW-1){!yv[NSTAGES][WW-OW]}}});
 
 	always @(posedge i_clk)
+	if (i_reset)
+	begin
+		o_xval <= 0;
+		o_yval <= 0;
+	end else if (i_ce)
 	begin
 		o_xval <= pre_xval[(WW-1):(WW-OW)];
 		o_yval <= pre_yval[(WW-1):(WW-OW)];

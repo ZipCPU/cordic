@@ -45,9 +45,9 @@
 #include <stdio.h>
 
 extern	void	sintable(FILE *fp, const char *fname, int lgtable, int ow,
-			bool with_reset, bool with_aux);
+			bool with_reset, bool with_aux, bool async_reset);
 
 extern	void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
-			bool with_reset, bool with_aux);
+			bool with_reset, bool with_aux, bool async_reset);
 
 #endif

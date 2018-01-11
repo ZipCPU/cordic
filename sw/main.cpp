@@ -89,14 +89,18 @@ int	main(int argc, char **argv) {
 	bool	with_reset = true, with_aux = true;
 	bool	polar_to_rect = false, rect_to_polar = true, verbose=false,
 		gen_sintable = false, gen_quarterwav = false, c_header = false,
-		gen_quadtbl = false;
+		gen_quadtbl = false, async_reset = false;
 	int	c;
 	FILE	*fp, *fhp;
 
-	while((c = getopt(argc, argv, "acf:hi:n:o:p:rt:vx:"))!=-1) {
+	while((c = getopt(argc, argv, "aAcf:hi:n:o:p:Rrt:vx:"))!=-1) {
 		switch(c) {
 		case 'a':
 			with_aux = true;
+			break;
+		case 'A':
+			async_reset = true;
+			with_reset = true;
 			break;
 		case 'c':
 			c_header = true;
@@ -119,6 +123,9 @@ int	main(int argc, char **argv) {
 			break;
 		case 'p':
 			phase_bits = atoi(optarg);
+			break;
+		case 'R':
+			with_reset = false;
 			break;
 		case 'r':
 			with_reset = true;
@@ -217,7 +224,9 @@ int	main(int argc, char **argv) {
 			"\tNumber of stages: %2d\n",
 			(fp == stdout)?"(stdout)":fname,
 			iw, nxtra, ow, phase_bits, nstages);
-			if (with_reset)
+			if ((with_reset)&&(async_reset))
+				printf("\tDesign will include an async reset signal\n");
+			else if (with_reset)
 				printf("\tDesign will include a reset signal\n");
 			if (with_aux)
 				printf("\tAux bits will be added to the design\n");
@@ -225,7 +234,7 @@ int	main(int argc, char **argv) {
 
 		basiccordic(fp, fhp, fname,
 			nstages, iw, ow, nxtra, phase_bits,
-			with_reset, with_aux);
+			with_reset, with_aux, async_reset);
 	} if (rect_to_polar) {
 		if ((iw < 0)&&(ow > 0))
 			iw = ow;
@@ -260,7 +269,7 @@ int	main(int argc, char **argv) {
 
 		topolar(fp, fhp, fname,
 			nstages, iw, ow, nxtra, phase_bits,
-			with_reset, with_aux);
+			with_reset, with_aux, async_reset);
 	} if (gen_sintable) {
 		if ((iw >= 0)&&(phase_bits < 0)) {
 			phase_bits = iw;
@@ -290,13 +299,15 @@ int	main(int argc, char **argv) {
 			"\tOutput bits     : %2d\n",
 			(fp == stdout)?"(stdout)":fname,
 			phase_bits, phase_bits, ow);
-			if (with_reset)
+			if ((with_reset)&&(async_reset))
+				printf("\tDesign will include an async reset signal\n");
+			else if (with_reset)
 				printf("\tDesign will include a reset signal\n");
 			if (with_aux)
 				printf("\tAux bits will be added to the design\n");
 		}
 
-		sintable(fp, fname, phase_bits, ow, with_reset, with_aux);
+		sintable(fp, fname, phase_bits, ow, with_reset, with_aux, async_reset);
 	} if (gen_quarterwav) {
 		if ((iw >= 0)&&(phase_bits < 0)) {
 			phase_bits = iw;
@@ -326,13 +337,15 @@ int	main(int argc, char **argv) {
 			"\tOutput bits     : %2d\n",
 			(fp == stdout)?"(stdout)":fname,
 			phase_bits, phase_bits, ow);
-			if (with_reset)
+			if ((with_reset)&&(async_reset))
+				printf("\tDesign will include an async reset signal\n");
+			else if (with_reset)
 				printf("\tDesign will include a reset signal\n");
 			if (with_aux)
 				printf("\tAux bits will be added to the design\n");
 		}
 
-		quarterwav(fp, fname, phase_bits, ow, with_reset, with_aux);
+		quarterwav(fp, fname, phase_bits, ow, with_reset, with_aux, async_reset);
 	} if (gen_quadtbl) {
 		if ((iw < 0)&&(ow > 0))
 			iw = ow;
@@ -361,7 +374,9 @@ int	main(int argc, char **argv) {
 			// "\tNumber of stages: %2d\n",
 			(fp == stdout)?"(stdout)":fname, // iw,
 			nxtra, ow, phase_bits);
-			if (with_reset)
+			if ((with_reset)&&(async_reset))
+				printf("\tDesign will include an async reset signal\n");
+			else if (with_reset)
 				printf("\tDesign will include a reset signal\n");
 			if (with_aux)
 				printf("\tAux bits will be added to the design\n");
@@ -372,6 +387,6 @@ int	main(int argc, char **argv) {
 			nstages, iw, ow, nxtra, phase_bits,
 			with_reset, with_aux);
 		*/
-		quadtbl(fp, fhp, fname, phase_bits, ow, nxtra, with_reset, with_aux);
+		quadtbl(fp, fhp, fname, phase_bits, ow, nxtra, with_reset, with_aux, async_reset);
 	}
 }

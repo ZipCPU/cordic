@@ -59,7 +59,11 @@ public:
 		m_core->i_phase = 0;
 		m_core->i_aux   = 0;
 #ifdef	HAS_RESET_WIRE
+#ifdef	ASYNC_RESET
+		m_core->i_areset_n = 0;
+#else
 		m_core->i_reset = 1;
+#endif
 		tick();
 #endif
 	}
@@ -81,7 +85,7 @@ int main(int  argc, char **argv) {
 	// This only works on DUT's with the aux flag turned on.
 	assert(HAS_AUX);
 
-	tb->opentrace("quadtbl_tb.vcd");
+	// tb->opentrace("quadtbl_tb.vcd");
 	tb->reset();
 
 

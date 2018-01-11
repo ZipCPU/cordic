@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <string>
 #include <ctype.h>
 #include <assert.h>
 
@@ -46,7 +47,8 @@
 #include "topolar.h"
 
 void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow,
-		int nxtra, int phase_bits, bool with_reset, bool with_aux) {
+		int nxtra, int phase_bits, bool with_reset, bool with_aux,
+		bool async_reset) {
 	int	working_width = iw;
 	const	char	*name;
 	const	char PURPOSE[] =
@@ -72,6 +74,16 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 	working_width += nxtra;
 	name = modulename(fname);
 
+	std::string	resetw = (!with_reset) ? ""
+			: (async_reset) ? "i_areset_n, ":"i_reset, ";
+	std::string	always_reset = "\talways @(posedge i_clk)\n\t";
+	if ((with_reset)&&(async_reset))
+		always_reset = "\talways @(posedge i_clk, negedge i_areset_n)\n"
+			"\tif (!i_areset_n)\n";
+	else if (with_reset)
+		always_reset = "\talways @(posedge i_clk)\n"
+			"\tif (i_reset)\n";
+
 	fprintf(fp, "`default_nettype\tnone\n//\n");
 	fprintf(fp,
 		"module	%s(i_clk, %si_ce, i_xval, i_yval,%s\n"
@@ -86,10 +98,10 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 		"\tinput\twire\tsigned\t[(IW-1):0]\ti_xval, i_yval;\n"
 		"\toutput\treg\tsigned\t[(OW-1):0]\to_mag;\n"
 		"\toutput\treg\t\t[(PW-1):0]\to_phase;\n",
-		name, (with_reset)?"i_reset, ":"",
+		name, resetw.c_str(),
 		(with_aux)?" i_aux,":"", (with_aux)?", o_aux":"",
 		iw, ow, nstages, nxtra, working_width, phase_bits,
-		(with_reset)?"i_reset, ":"");
+		resetw.c_str());
 
 	if (with_aux) {
 		fprintf(fp,
@@ -129,7 +141,7 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 		"\treg	signed	[(WW-1):0]	yv	[0:NSTAGES];\n"
 		"\treg		[(PW-1):0]	ph	[0:NSTAGES];\n\n");
 
-	if (with_aux)
+	if (with_aux) {
 		fprintf(fp,
 "\t//\n"
 "\t// Handle the auxilliary logic.\n"
@@ -142,27 +154,31 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 "\t// to this value, o_aux *must* contain the value that was in i_aux.\n"
 "\t//\n"
 "\treg\t\t[(NSTAGES):0]\tax;\n"
-"\n"
-"\talways @(posedge i_clk)\n"
-"\t\tif (i_reset)\n"
-"\t\t\tax <= {(NSTAGES+1){1'b0}};\n"
-"\t\telse if (i_ce)\n"
-"\t\t\tax <= { ax[(NSTAGES-1):0], i_aux };\n"
 "\n");
+
+		fprintf(fp, "%s", always_reset.c_str());
+
+		if (with_reset)
+			fprintf(fp,
+"\t\tax <= {(NSTAGES+1){1'b0}};\n"
+"\telse ");
+
+		fprintf(fp, "if (i_ce)\n"
+"\t\tax <= { ax[(NSTAGES-1):0], i_aux };\n"
+"\n");
+	}
 
 	fprintf(fp,
 		"\t// First stage, map to within +/- 45 degrees\n"
-		"\talways @(posedge i_clk)\n");
+		"%s", always_reset.c_str());
 	if (with_reset)
 		fprintf(fp,
-			"\t\tif (i_reset)\n"
-			"\t\tbegin\n"
-			"\t\t\txv[0] <= 0;\n"
-			"\t\t\tyv[0] <= 0;\n"
-			"\t\t\tph[0] <= 0;\n"
-			"\t\tend else if (i_ce)\n\t\t");
-	else
-		fprintf(fp, "\t\tif (i_ce)\n\t\t");
+			"\tbegin\n"
+			"\t\txv[0] <= 0;\n"
+			"\t\tyv[0] <= 0;\n"
+			"\t\tph[0] <= 0;\n"
+			"\tend else ");
+	fprintf(fp, "if (i_ce)\n\t\t");
 
 	fprintf(fp,
 		"case({i_xval[IW-1], i_yval[IW-1]})\n");
@@ -205,13 +221,24 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 	fprintf(fp,"\n"
 		"\tgenvar\ti;\n"
 		"\tgenerate for(i=0; i<NSTAGES; i=i+1) begin : TOPOLARloop\n");
+
+	if ((with_reset)&&(async_reset))
+		fprintf(fp,
+			"\t\talways @(posedge i_clk, negedge i_areset_n)\n");
+	else
+		fprintf(fp,
+		"\t\talways @(posedge i_clk)\n");
+
 	fprintf(fp,
-		"\t\talways @(posedge i_clk)\n"
 		"\t\t// Here\'s where we are going to put the actual CORDIC\n"
 		"\t\t// rectangular to polar loop.  Everything up to this\n"
 		"\t\t// point has simply been necessary preliminaries.\n");
 	if (with_reset) {
-		fprintf(fp, "\t\tif (i_reset)\n"
+		if (async_reset)
+			fprintf(fp, "\t\tif (!i_areset_n)\n");
+		else
+			fprintf(fp, "\t\tif (i_reset)\n");
+		fprintf(fp,
 			"\t\tbegin\n"
 			"\t\t\txv[i+1] <= 0;\n"
 			"\t\t\tyv[i+1] <= 0;\n"
@@ -255,9 +282,20 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 				"\t\t\t\txv[NSTAGES][(WW-OW)],\n"
 				"\t\t\t\t{(WW-OW-1){!xv[NSTAGES][WW-OW]}}});\n"
 			"\n");
-		fprintf(fp,
-			"\talways @(posedge i_clk)\n"
-			"\tif (i_ce)\n"
+
+		fprintf(fp, "%s", always_reset.c_str());
+		if (with_reset) {
+			fprintf(fp,
+				"\tbegin\n"
+				"\t\to_mag   <= 0;\n"
+				"\t\to_phase <= 0;\n");
+			if (with_aux)
+				fprintf(fp,
+				"\t\to_aux <= 0;\n");
+			fprintf(fp, "\tend else ");
+		}
+
+		fprintf(fp, "if (i_ce)\n"
 			"\tbegin\n"
 			"\t\to_mag   <= pre_mag[(WW-1):(WW-OW)];\n"
 			"\t\to_phase <= ph[NSTAGES];\n");
@@ -273,9 +311,18 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 			" pre_mag[WW-1], pre_mag[(WW-OW-1):0] };\n"
 			"\t// verilator lint_on UNUSED\n");
 	} else {
-		fprintf(fp,
-			"\talways @(posedge i_clk)\n"
-			"\tif (i_ce)\n"
+		fprintf(fp, "%s", always_reset.c_str());
+
+		if (with_reset) {
+			fprintf(fp, "\tbegin\n"
+			"\t\to_mag   <= 0;\n"
+			"\t\to_phase <= 0;\n");
+			if (with_aux)
+				fprintf(fp, "\t\to_aux  <= 0;\n");
+			fprintf(fp, "\tend else ");
+		}
+
+		fprintf(fp, "if (i_ce)\n"
 			"\tbegin\t// We accumulate a bit during our processing, so shift by one\n"
 			"\t\to_mag   <= xv[NSTAGES][(WW-1):(WW-OW)];\n"
 			"\t\to_phase <= ph[NSTAGES];\n");
@@ -299,6 +346,8 @@ void	topolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int ow
 		}
 		fprintf(fhp, "#ifndef	%s\n", str);
 		fprintf(fhp, "#define	%s\n", str);
+		if (async_reset)
+			fprintf(fhp, "#define\tASYNC_RESET\n");
 		fprintf(fhp, "const int	IW = %d;\n", iw);
 		fprintf(fhp, "const int	OW = %d;\n", ow);
 		fprintf(fhp, "const int	NEXTRA = %d;\n", nxtra);

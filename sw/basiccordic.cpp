@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <string>
 #include <ctype.h>
 #include <assert.h>
 
@@ -48,7 +49,7 @@
 void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		int nstages, int iw, int ow, int nxtra,
 		int phase_bits,
-		bool with_reset, bool with_aux) {
+		bool with_reset, bool with_aux, bool async_reset) {
 	int	working_width = iw;
 	const	char *name;
 	const	char PURPOSE[] =
@@ -70,11 +71,21 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		working_width = ow;
 	working_width += nxtra;
 
+	std::string	resetw = (!with_reset)?""
+			: ((async_reset)?"i_areset_n" : "i_reset");
+	std::string	always_reset = "\talways @(posedge i_clk)\n\t";
+	if ((with_reset)&&(async_reset))
+		always_reset = "\talways @(posedge i_clk, negedge i_areset_n)\n"
+				"\tif (!i_areset_n)\n";
+	else if (with_reset)
+		always_reset = "\talways @(posedge i_clk)\n"
+				"\tif (i_reset)\n";
+
 	name = modulename(fname);
 
 	fprintf(fp, "`default_nettype\tnone\n//\n");
 	fprintf(fp,
-		"module	%s(i_clk, %si_ce, i_xval, i_yval, i_phase,%s\n"
+		"module	%s(i_clk, %s%si_ce, i_xval, i_yval, i_phase,%s\n"
 		"\t\to_xval, o_yval%s);\n"
 		"\tlocalparam\tIW=%2d,\t// The number of bits in our inputs\n"
 		"\t\t\tOW=%2d,\t// The number of output bits to produce\n"
@@ -82,14 +93,14 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		"\t\t\tXTRA=%2d,// Extra bits for internal precision\n"
 		"\t\t\tWW=%2d,\t// Our working bit-width\n"
 		"\t\t\tPW=%2d;\t// Bits in our phase variables\n"
-		"\tinput\twire\t\t\t\ti_clk, %si_ce;\n"
+		"\tinput\twire\t\t\t\ti_clk, %s%si_ce;\n"
 		"\tinput\twire\tsigned\t[(IW-1):0]\t\ti_xval, i_yval;\n"
 		"\tinput\twire\t\t[(PW-1):0]\t\t\ti_phase;\n"
 		"\toutput\treg\tsigned\t[(OW-1):0]\to_xval, o_yval;\n",
-		name, (with_reset)?"i_reset, ":"",
+		name, resetw.c_str(), (with_reset)?", ":"",
 		(with_aux)?" i_aux,":"", (with_aux)?", o_aux":"",
 		iw, ow, nstages, nxtra, working_width, phase_bits,
-		(with_reset)?"i_reset, ":"");
+		resetw.c_str(), (with_reset)?", ":"");
 
 	if (with_aux) {
 		fprintf(fp,
@@ -125,7 +136,7 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		"\treg	signed	[(WW-1):0]	yv	[0:(NSTAGES)];\n"
 		"\treg		[(PW-1):0]	ph	[0:(NSTAGES)];\n\n");
 
-	if (with_aux)
+	if (with_aux) {
 		fprintf(fp,
 "\t//\n"
 "\t// Handle the auxilliary logic.\n"
@@ -138,23 +149,27 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 "\t// to this value, o_aux *must* contain the value that was in i_aux.\n"
 "\t//\n"
 "\treg\t\t[(NSTAGES):0]\tax;\n"
-"\n"
-"\talways @(posedge i_clk)\n"
-"\t\tif (i_reset)\n"
-"\t\t\tax <= {(NSTAGES+1){1'b0}};\n"
-"\t\telse if (i_ce)\n"
-"\t\t\tax <= { ax[(NSTAGES-1):0], i_aux };\n"
 "\n");
+
+		fprintf(fp, "%s", always_reset.c_str());
+
+		if (with_reset)
+			fprintf(fp,
+				"\t\tax <= {(NSTAGES+1){1'b0}};\n\telse ");
+		fprintf(fp, "if (i_ce)\n"
+			"\t\tax <= { ax[(NSTAGES-1):0], i_aux };\n"
+			"\n");
+	}
 
 	fprintf(fp,
 		"\t// First stage, get rid of all but 45 degrees\n"
 		"\t//\tThe resulting phase needs to be between -45 and 45\n"
-		"\t//\t\tdegrees but in units of normalized phase\n"
-		"\talways @(posedge i_clk)\n\t");
+		"\t//\t\tdegrees but in units of normalized phase\n");
+
+	fprintf(fp, "%s", always_reset.c_str());
 
 	if (with_reset)
 		fprintf(fp,
-			"if (i_reset)\n"
 			"\tbegin\n"
 			"\t\txv[0] <= 0;\n"
 			"\t\tyv[0] <= 0;\n"
@@ -238,23 +253,31 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 
 	fprintf(fp,"\n"
 		"\tgenvar	i;\n"
-		"\tgenerate for(i=0; i<NSTAGES; i=i+1) begin : CORDICops\n"
-		"\t\talways @(posedge i_clk)\n"
+		"\tgenerate for(i=0; i<NSTAGES; i=i+1) begin : CORDICops\n");
+	if ((with_reset)&&(async_reset))
+		fprintf(fp, "\t\talways @(posedge i_clk, negedge i_areset_n)\n");
+	else
+		fprintf(fp, "\t\talways @(posedge i_clk)\n");
+	fprintf(fp,
 		"\t\t// Here\'s where we are going to put the actual CORDIC\n"
 		"\t\t// we\'ve been studying and discussing.  Everything up to\n"
 		"\t\t// this point has simply been necessary preliminaries.\n");
 	if (with_reset) {
-		fprintf(fp, "\t\tif (i_reset)\n"
+		if (async_reset)
+			fprintf(fp, "\t\tif (!i_areset_n)\n");
+		else
+			fprintf(fp, "\t\tif (i_reset)\n");
+		fprintf(fp,
 			"\t\tbegin\n"
 			"\t\t\txv[i+1] <= 0;\n"
 			"\t\t\tyv[i+1] <= 0;\n"
 			"\t\t\tph[i+1] <= 0;\n"
-			"\t\tend else if (i_ce)\n");
+			"\t\tend else ");
 	} else
-		fprintf(fp,
-			"\t\tif (i_ce)\n");
+		fprintf(fp, "\t\t");
 
 	fprintf(fp,
+		"if (i_ce)\n"
 		"\t\tbegin\n"
 		"\t\t\tif ((cordic_angle[i] == 0)||(i >= WW))\n"
 		"\t\t\tbegin // Do nothing but move our outputs\n"
@@ -292,8 +315,23 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 				"\t\t\t\tyv[NSTAGES][(WW-OW)],\n"
 				"\t\t\t\t{(WW-OW-1){!yv[NSTAGES][WW-OW]}}});\n"
 			"\n");
+		if ((with_reset)&&(async_reset))
+			fprintf(fp, "\talways @(posedge i_clk, negedge i_areset_n)\n"
+				"\tif (!i_areset_n)\n");
+		else if (with_reset)
+			fprintf(fp, "\talways @(posedge i_clk)\n"
+				"\tif (i_reset)\n");
+		else
+			fprintf(fp, "\talways @(posedge i_clk)\n\t");
+
+		if (with_reset)
+			fprintf(fp, "\tbegin\n"
+			"\t\to_xval <= 0;\n"
+			"\t\to_yval <= 0;\n"
+			"\tend else ");
+
 		fprintf(fp,
-			"\talways @(posedge i_clk)\n"
+			"if (i_ce)\n"
 			"\tbegin\n"
 			"\t\to_xval <= pre_xval[(WW-1):(WW-OW)];\n"
 			"\t\to_yval <= pre_yval[(WW-1):(WW-OW)];\n");
@@ -311,8 +349,25 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 			"\t\t};\n"
 			"\t// verilator lint_on UNUSED\n");
 	} else {
+
+		if ((with_reset)&&(async_reset))
+			fprintf(fp, "\talways @(posedge i_clk, negedge i_areset_n)\n"
+				"\tif (!i_areset_n)\n");
+		else if (with_reset)
+			fprintf(fp, "\talways @(posedge i_clk)\n"
+				"\tif (i_reset)\n");
+		else
+			fprintf(fp, "\talways @(posedge i_clk)\n\t");
+
+		if (with_reset)
+			fprintf(fp,
+			"\tbegin\n"
+			"\t\to_xval <= 0;\n"
+			"\t\to_yval <= 0;\n"
+			"\tend else ");
+
 		fprintf(fp,
-			"\talways @(posedge i_clk)\n"
+			"if (i_ce)\n"
 			"\tbegin\t// We accumulate a bit during our processing, so shift by one\n"
 			"\t\to_xval <= xv[NSTAGES][(WW-1):(WW-OW)];\n"
 			"\t\to_yval <= yv[NSTAGES][(WW-1):(WW-OW)];\n");
@@ -338,6 +393,8 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		fprintf(fhp, "#ifndef	%s\n", str);
 		fprintf(fhp, "#define	%s\n", str);
 
+		if (async_reset)
+			fprintf(fhp, "#define\tASYNC_RESET\n");
 		fprintf(fhp, "const int	IW = %d;\n", iw);
 		fprintf(fhp, "const int	OW = %d;\n", ow);
 		fprintf(fhp, "const int	NEXTRA = %d;\n", nxtra);

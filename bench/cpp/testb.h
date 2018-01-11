@@ -106,12 +106,20 @@ public:
 
 	virtual	void	reset(void) {
 #ifdef	HAS_RESET_WIRE
+#ifdef	ASYNC_RESET
+		m_core->i_areset_n = 0;
+#else
 		m_core->i_reset = 1;
+#endif
 #ifdef	HAS_AUX_WIRE
 		m_core->i_aux = 0;
 #endif
 		tick();
+#ifdef	ASYNC_RESET
+		m_core->i_areset_n = 1;
+#else
 		m_core->i_reset = 0;
+#endif
 		// printf("RESET\n");
 #else
 #ifdef	HAS_AUX_WIRE

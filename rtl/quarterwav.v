@@ -61,36 +61,34 @@ module	quarterwav(i_clk, i_reset, i_ce, i_phase, i_aux, o_val, o_aux);
 	reg	[(OW-1):0]	tblvalue;
 
 	always @(posedge i_clk)
-		if (i_reset)
-		begin
-			negate  <= 2'b00;
-			index   <= 0;
-			tblvalue<= 0;
-			o_val   <= 0;
-		end else if (i_ce)
-		begin
-			// Clock #1
-			negate[0] <= i_phase[(PW-1)];
-			if (i_phase[(PW-2)])
-				index <= ~i_phase[(PW-3):0];
-			else
-				index <=  i_phase[(PW-3):0];
-
-			// Clock #2
-			tblvalue <= quartertable[index];
-			negate[1] <= negate[0];
-
-			// Output Clock
-			if (negate[1])
-				o_val <= -tblvalue;
-			else
-				o_val <=  tblvalue;
-		end
+	if (i_reset)
+	begin
+		negate  <= 2'b00;
+		index   <= 0;
+		tblvalue<= 0;
+		o_val   <= 0;
+	end else if (i_ce)
+	begin
+		// Clock #1
+		negate[0] <= i_phase[(PW-1)];
+		if (i_phase[(PW-2)])
+			index <= ~i_phase[(PW-3):0];
+		else
+			index <=  i_phase[(PW-3):0];
+		// Clock #2
+		tblvalue <= quartertable[index];
+		negate[1] <= negate[0];
+		// Output Clock
+		if (negate[1])
+			o_val <= -tblvalue;
+		else
+			o_val <=  tblvalue;
+	end
 
 	reg [1:0]	aux;
 	always @(posedge i_clk)
-	if (i_ce)
+	if (i_reset)
 		{ o_aux, aux } <= 0;
-	else
+	else if (i_ce)
 		{ o_aux, aux } <= { aux, i_aux };
 endmodule
