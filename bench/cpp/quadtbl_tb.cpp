@@ -177,8 +177,8 @@ int main(int  argc, char **argv) {
 		outpt = new COMPLEX[FFTLEN];
 
 		for(unsigned k=0; k<FFTLEN; k++) {
-			outpt[k].real() = sdata[(k+(FFTLEN/4))&(FFTLEN-1)];
-			outpt[k].imag() = sdata[k];
+			outpt[k].real(sdata[(k+(FFTLEN/4))&(FFTLEN-1)]);
+			outpt[k].imag(sdata[k]);
 		}
 
 		// Now we need to do an FFT

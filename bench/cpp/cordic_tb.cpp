@@ -262,8 +262,8 @@ int main(int  argc, char **argv) {
 		outpt = new COMPLEX[FFTLEN];
 
 		for(unsigned k=0; k<FFTLEN; k++) {
-			outpt[k].real() = xval[k];
-			outpt[k].imag() = yval[k];
+			outpt[k].real(xval[k]);
+			outpt[k].imag(yval[k]);
 		}
 
 		// Now we need to do an FFT
