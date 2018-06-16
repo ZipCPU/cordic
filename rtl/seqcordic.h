@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	cordic.h
+// Filename: 	seqcordic.h
 //
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	This .h file notes the default parameter values from
-//		within the generated file.  It is used to communicate
+//		within the generated seqcordic file.  It is used to communicate
 //	information about the design to the bench testing code.
 //
 // Creator:	Dan Gisselquist, Ph.D.
@@ -37,8 +37,13 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#ifndef	CORDIC_H
-#define	CORDIC_H
+#ifndef	SEQCORDIC_H
+#define	SEQCORDIC_H
+#ifdef	CLOCKS_PER_OUTPUT
+#undef	CLOCKS_PER_OUTPUT
+#endif	// CLOCKS_PER_OUTPUT
+#define	CLOCKS_PER_OUTPUT	16
+
 const int	IW = 12;
 const int	OW = 12;
 const int	NEXTRA = 3;
@@ -53,4 +58,4 @@ const bool	HAS_RESET = true;
 const bool	HAS_AUX   = true;
 #define	HAS_RESET_WIRE
 #define	HAS_AUX_WIRES
-#endif	// CORDIC_H
+#endif	// SEQCORDIC_H

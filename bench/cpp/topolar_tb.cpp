@@ -12,7 +12,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -40,11 +40,18 @@
 
 #include <verilated.h>
 #include <verilated_vcd_c.h>
-#include "Vtopolar.h"
-#include "topolar.h"
+#ifdef	CLOCKS_PER_OUTPUT
+# include "Vseqpolar.h"
+# include "seqpolar.h"
+# define BASECLASS Vseqpolar
+#else
+# include "Vtopolar.h"
+# include "topolar.h"
+# define BASECLASS Vtopolar
+#endif
 #include "testb.h"
 
-class	TOPOLAR_TB : public TESTB<Vtopolar> {
+class	TOPOLAR_TB : public TESTB<BASECLASS> {
 	bool		m_debug;
 public:
 
@@ -57,7 +64,11 @@ public:
 		m_core->i_reset = 1;
 #endif
 #endif
+#ifdef	CLOCKS_PER_OUTPUT
+		m_core->i_stb   = 0;
+#else
 		m_core->i_ce    = 1;
+#endif
 		m_core->i_xval  = 0;
 		m_core->i_yval  = 0;
 		m_core->i_aux   = 0;
@@ -87,7 +98,12 @@ int main(int  argc, char **argv) {
 	ophase = new int[NSAMPLES];
 	dpdata = new double[NSAMPLES];
 
+#ifdef	CLOCKS_PER_OUTPUT
+	tb->opentrace("seqpolar_tb.vcd");
+#else
 	tb->opentrace("topolar_tb.vcd");
+#endif
+
 	tb->reset();
 
 	shift  = (8*sizeof(long)-OW);
@@ -112,7 +128,23 @@ int main(int  argc, char **argv) {
 		tb->m_core->i_xval  = ixval[i];
 		tb->m_core->i_yval  = iyval[i];
 		tb->m_core->i_aux   = 1;
+
+#ifdef	CLOCKS_PER_OUTPUT
+		tb->m_core->i_stb = 1;
+		for(int j=0; j<CLOCKS_PER_OUTPUT-1; j++) {
+			tb->tick();
+			tb->m_core->i_stb = 0;
+			assert(!tb->m_core->o_done);
+			assert( tb->m_core->o_busy);
+		}
+
 		tb->tick();
+		assert(!tb->m_core->o_busy);
+		assert(tb->m_core->o_done);
+		assert(tb->m_core->o_aux);
+#else
+		tb->tick();
+#endif
 
 		if (tb->m_core->o_aux) {
 			long	lv;
@@ -132,6 +164,7 @@ int main(int  argc, char **argv) {
 		}
 	}
 
+#ifndef	CLOCKS_PER_OUTPUT
 	tb->m_core->i_aux = 0;
 	while(tb->m_core->o_aux) {
 		tb->m_core->i_aux   = 0;
@@ -154,6 +187,7 @@ int main(int  argc, char **argv) {
 			idx++;
 		}
 	}
+#endif
 
 	double	mxperr = 0.0, mxverr = 0.0;
 	for(int i=0; i<NSAMPLES; i++) {

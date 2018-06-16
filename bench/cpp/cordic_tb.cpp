@@ -12,7 +12,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -40,18 +40,29 @@
 
 #include <verilated.h>
 #include <verilated_vcd_c.h>
-#include "Vcordic.h"
-#include "cordic.h"
+#ifdef	CLOCKS_PER_OUTPUT
+# include "Vseqcordic.h"
+# include "seqcordic.h"
+# define BASECLASS Vseqcordic
+#else
+# include "Vcordic.h"
+# include "cordic.h"
+# define BASECLASS Vcordic
+#endif
 #include "fft.h"
 #include "testb.h"
 
-class	CORDIC_TB : public TESTB<Vcordic> {
+class	CORDIC_TB : public TESTB<BASECLASS> {
 	bool		m_debug;
 public:
 
 	CORDIC_TB(void) {
 		m_debug = true;
+#ifdef	CLOCKS_PER_OUTPUT
+		m_core->i_stb   = 0;
+#else	// CLOCKS_PER_OUTPUT
 		m_core->i_ce    = 1;
+#endif	// CLOCKS_PER_OUTPUT
 		m_core->i_xval  = (1ul<<(IW-1))-1;
 		m_core->i_yval  = 0;
 		m_core->i_phase = 0;
@@ -74,7 +85,7 @@ int main(int  argc, char **argv) {
 	Verilated::commandArgs(argc, argv);
 	CORDIC_TB	*tb = new CORDIC_TB;
 	int	*pdata, *xval, *yval,
-		*ixval, *iyval, idx, shift;
+		*ixval, *iyval, idx;
 	double	scale;
 
 	pdata = new int[NSAMPLES];
@@ -86,10 +97,12 @@ int main(int  argc, char **argv) {
 	// This only works on DUT's with the aux flag turned on.
 	assert(HAS_AUX);
 
+#ifdef	CLOCKS_PER_OUTPUT
+	tb->opentrace("seqcordic_tb.vcd");
+#else
 	tb->opentrace("cordic_tb.vcd");
+#endif
 	tb->reset();
-
-	shift = (8*sizeof(int)-OW);
 
 	scale  = tb->m_core->i_xval * (double)tb->m_core->i_xval;
 	scale += tb->m_core->i_yval * (double)tb->m_core->i_yval;
@@ -112,7 +125,21 @@ int main(int  argc, char **argv) {
 		ixval[i] = tb->m_core->i_xval;
 		iyval[i] = tb->m_core->i_yval;
 		tb->m_core->i_aux   = 1;
+
+#ifdef	CLOCKS_PER_OUTPUT
+		tb->m_core->i_stb = 1;
+		for(int j=0; j<CLOCKS_PER_OUTPUT-1; j++) {
+			tb->tick();
+			tb->m_core->i_stb = 0;
+			assert(!tb->m_core->o_done);
+		}
+
 		tb->tick();
+		assert(tb->m_core->o_done);
+		assert(tb->m_core->o_aux);
+#else
+		tb->tick();
+#endif
 
 		if (tb->m_core->o_aux) {
 			shift = (8*sizeof(int)-OW);
@@ -126,9 +153,10 @@ int main(int  argc, char **argv) {
 		}
 	}
 
+#ifndef	CLOCKS_PER_OUTPUT
 	tb->m_core->i_aux = 0;
 	while(tb->m_core->o_aux) {
-		shift = (8*sizeof(int)-OW);
+		int	shift = (8*sizeof(int)-OW);
 		tb->m_core->i_aux   = 0;
 		tb->tick();
 
@@ -142,6 +170,7 @@ int main(int  argc, char **argv) {
 			assert(idx <= NSAMPLES);
 		}
 	}
+#endif
 
 	double	mxerr = 0.0, averr = 0.0, mag = 0, imag=0, sumxy = 0.0,
 		sumsq = 0.0, sumd = 0.0;

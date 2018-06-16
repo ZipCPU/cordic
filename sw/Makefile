@@ -35,7 +35,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published
@@ -62,11 +62,13 @@ all:
 CXX  := g++
 OBJDIR := obj-pc
 VSRCD  := ../rtl
-SOURCES:= main.cpp cordiclib.cpp legal.cpp basiccordic.cpp topolar.cpp \
-	sintable.cpp quadtbl.cpp hexfile.cpp
+SOURCES:= main.cpp legal.cpp basiccordic.cpp topolar.cpp \
+	sintable.cpp quadtbl.cpp hexfile.cpp seqcordic.cpp seqpolar.cpp \
+	cordiclib.cpp
 HEADERS:= $(wildcard $(subst .cpp,.h,$(SOURCES)))
 OBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
-VSRC   := topolar.v cordic.v sintable.v quarterwav.v quadtbl.v
+VSRC   := topolar.v cordic.v sintable.v quarterwav.v quadtbl.v	\
+	seqcordic.v seqpolar.v
 CFLAGS := -g -Og -Wall
 PROGRAMS:= gencordic
 CRDCARGS := -v -c
@@ -84,6 +86,8 @@ gencordic: $(OBJECTS)
 	rm -f $(VSRCD)/sintable.v
 	rm -f $(VSRCD)/quarterwav.v
 	rm -f $(VSRCD)/quadtbl.v
+	rm -f $(VSRCD)/seqcordic.v
+	rm -f $(VSRCD)/seqpolar.v
 	$(CXX) $(OBJECTS) -o $@
 
 .PHONY: topolar topolar.v
@@ -93,6 +97,13 @@ $(VSRCD)/topolar.v: gencordic
 	$(mk-rtldir)
 	./gencordic $(CRDCARGS) -f $(VSRCD)/topolar.v -i 12 -o 12 -t r2p -x 1
 
+.PHONY: seqpolar seqpolar.v
+seqpolar: $(VSRCD)/seqpolar.v
+seqpolar.v: seqpolar
+$(VSRCD)/seqpolar.v: gencordic
+	$(mk-rtldir)
+	./gencordic $(CRDCARGS) -f $(VSRCD)/seqpolar.v -i 12 -o 12 -t sr2p -x 1
+
 .PHONY: basiccordic cordic.v cordic
 basiccordic: $(VSRCD)/cordic.v
 cordic: basiccordic
@@ -101,6 +112,14 @@ $(VSRCD)/cordic.v: gencordic
 	$(mk-rtldir)
 	./gencordic -f $(VSRCD)/cordic.v  -v -i 12 -o 12 -t p2r -x 2 -c
 	# ./gencordic $(CRDCARGS) -f $(VSRCD)/cordic.v -i 24 -o 24 -t p2r -x 1
+
+.PHONY: seqcordic cordic.v cordic
+seqcordic: $(VSRCD)/seqcordic.v
+scordic: seqcordic
+seqcordic.v: seqcordic
+$(VSRCD)/seqcordic.v: gencordic
+	$(mk-rtldir)
+	./gencordic -f $(VSRCD)/seqcordic.v  -v -i 12 -o 12 -t sp2r -x 2 -c
 
 .PHONY: sintable sintable.v
 sintable: $(VSRCD)/sintable.v
@@ -127,7 +146,7 @@ $(VSRCD)/quadtbl.v: gencordic
 clean:
 	rm -f $(PROGRAMS) tags
 	rm -rf $(OBJDIR)/
-	rm -f $(VSRCD)/topolar.v $(VSRCD)/cordic.v
+	rm -f $(VSRCD)/topolar.v $(VSRCD)/cordic.v $(VSRCD)/seqcordic.v
 	rm -f $(VSRCD)/sintable.v $(VSRCD)/sintable.hex
 	rm -f $(VSRCD)/quarterwav.v $(VSRCD)/quarterwav.hex
 	rm -f $(VSRCD)/quadtbl.v $(VSRCD)/quadtbl_ctbl.hex $(VSRCD)/quadtbl_ltbl.hex $(VSRCD)/quadtbl_qtbl.hex

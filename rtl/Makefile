@@ -44,12 +44,14 @@ FBDIR := .
 VDIRFB:= $(FBDIR)/obj_dir
 
 .PHONY: test topolar cordic sintable quarterwav quadtbl
-test: topolar cordic sintable quarterwav quadtbl
+test: topolar cordic sintable quarterwav quadtbl seqcordic seqpolar
 topolar:    $(VDIRFB)/Vtopolar__ALL.a
 cordic:     $(VDIRFB)/Vcordic__ALL.a
 sintable:   $(VDIRFB)/Vsintable__ALL.a
 quarterwav: $(VDIRFB)/Vquarterwav__ALL.a
 quadtbl:    $(VDIRFB)/Vquadtbl__ALL.a
+seqcordic:  $(VDIRFB)/Vseqcordic__ALL.a
+seqpolar:   $(VDIRFB)/Vseqpolar__ALL.a
 VOBJ := obj_dir
 SUBMAKE := $(MAKE) --no-print-directory --directory=$(VOBJ) -f
 ifeq ($(VERILATOR_ROOT),)
@@ -78,6 +80,14 @@ $(VDIRFB)/Vquarterwav.h $(VDIRFB)/Vquarterwav.cpp $(VDIRFB)/Vquarterwav.mk: quar
 $(VDIRFB)/Vquadtbl__ALL.a: $(VDIRFB)/Vquadtbl.h $(VDIRFB)/Vquadtbl.cpp
 $(VDIRFB)/Vquadtbl__ALL.a: $(VDIRFB)/Vquadtbl.mk
 $(VDIRFB)/Vquadtbl.h $(VDIRFB)/Vquadtbl.cpp $(VDIRFB)/Vquadtbl.mk: quadtbl.v
+
+$(VDIRFB)/Vseqcordic__ALL.a: $(VDIRFB)/Vseqcordic.h $(VDIRFB)/Vseqcordic.cpp
+$(VDIRFB)/Vseqcordic__ALL.a: $(VDIRFB)/Vseqcordic.mk
+$(VDIRFB)/Vseqcordic.h $(VDIRFB)/Vseqcordic.cpp $(VDIRFB)/Vseqcordic.mk: seqcordic.v
+
+$(VDIRFB)/Vseqpolar__ALL.a: $(VDIRFB)/Vseqpolar.h $(VDIRFB)/Vseqpolar.cpp
+$(VDIRFB)/Vseqpolar__ALL.a: $(VDIRFB)/Vseqpolar.mk
+$(VDIRFB)/Vseqpolar.h $(VDIRFB)/Vseqpolar.cpp $(VDIRFB)/Vseqpolar.mk: seqpolar.v
 
 $(VDIRFB)/V%.cpp $(VDIRFB)/V%.h $(VDIRFB)/V%.mk: $(FBDIR)/%.v
 	$(VERILATOR) $(VFLAGS) $*.v

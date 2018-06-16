@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	../rtl/topolar.v
+// Filename: 	../rtl/seqpolar.v
 //
 // Project:	A series of CORDIC related projects
 //
@@ -9,6 +9,11 @@
 //	provided in i_xval and i_yval.  The internal CORDIC rotator will rotate
 //	(i_xval, i_yval) until i_yval is approximately zero.  The resulting
 //	xvalue and phase will be placed into o_xval and o_phase respectively.
+//
+//	This particular version of the polar to rectangular CORDIC converter
+//	converter processes a somple one at a time.  It is completely
+//	sequential, not parallel at all.
+//
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -41,16 +46,18 @@
 //
 `default_nettype	none
 //
-module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
-		o_mag, o_phase, o_aux);
+module	seqpolar(i_clk, i_reset, i_stb, i_xval, i_yval, i_aux, o_busy,
+		o_done, o_mag, o_phase, o_aux);
 	localparam	IW=12,	// The number of bits in our inputs
 			OW=12,// The number of output bits to produce
 			NSTAGES=16,
 			XTRA= 3,// Extra bits for internal precision
 			WW=18,	// Our working bit-width
 			PW=19;	// Bits in our phase variables
-	input					i_clk, i_reset, i_ce;
+	input					i_clk, i_reset, i_stb;
 	input	wire	signed	[(IW-1):0]	i_xval, i_yval;
+	output	wire				o_busy;
+	output	reg				o_done;
 	output	reg	signed	[(OW-1):0]	o_mag;
 	output	reg		[(PW-1):0]	o_phase;
 	input	wire				i_aux;
@@ -67,9 +74,8 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 	assign	e_yval = { {(2){i_yval[(IW-1)]}}, i_yval, {(WW-IW-2){1'b0}} };
 
 	// Declare variables for all of the separate stages
-	reg	signed	[(WW-1):0]	xv	[0:NSTAGES];
-	reg	signed	[(WW-1):0]	yv	[0:NSTAGES];
-	reg		[(PW-1):0]	ph	[0:NSTAGES];
+	reg	signed	[(WW-1):0]	xv, yv, prex, prey;
+	reg		[(PW-1):0]	ph, preph;
 
 	//
 	// Handle the auxilliary logic.
@@ -81,43 +87,37 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 	// are input together with i_aux, then when o_xval and o_yval are set
 	// to this value, o_aux *must* contain the value that was in i_aux.
 	//
-	reg		[(NSTAGES):0]	ax;
+	reg		aux;
 
 	always @(posedge i_clk)
 	if (i_reset)
-		ax <= {(NSTAGES+1){1'b0}};
-	else if (i_ce)
-		ax <= { ax[(NSTAGES-1):0], i_aux };
+		aux <= 0;
+	else if ((i_stb)&&(!o_busy))
+		aux <= i_aux;
 
 	// First stage, map to within +/- 45 degrees
 	always @(posedge i_clk)
-	if (i_reset)
-	begin
-		xv[0] <= 0;
-		yv[0] <= 0;
-		ph[0] <= 0;
-	end else if (i_ce)
 		case({i_xval[IW-1], i_yval[IW-1]})
 		2'b01: begin // Rotate by -315 degrees
-			xv[0] <=  e_xval - e_yval;
-			yv[0] <=  e_xval + e_yval;
-			ph[0] <= 19'h70000;
+			prex <=  e_xval - e_yval;
+			prey <=  e_xval + e_yval;
+			preph <= 19'h70000;
 			end
 		2'b10: begin // Rotate by -135 degrees
-			xv[0] <= -e_xval + e_yval;
-			yv[0] <= -e_xval - e_yval;
-			ph[0] <= 19'h30000;
+			prex <= -e_xval + e_yval;
+			prey <= -e_xval - e_yval;
+			preph <= 19'h30000;
 			end
 		2'b11: begin // Rotate by -225 degrees
-			xv[0] <= -e_xval - e_yval;
-			yv[0] <=  e_xval - e_yval;
-			ph[0] <= 19'h50000;
+			prex <= -e_xval - e_yval;
+			prey <=  e_xval - e_yval;
+			preph <= 19'h50000;
 			end
 		// 2'b00:
 		default: begin // Rotate by -45 degrees
-			xv[0] <=  e_xval + e_yval;
-			yv[0] <= -e_xval + e_yval;
-			ph[0] <= 19'h10000;
+			prex <=  e_xval + e_yval;
+			prey <= -e_xval + e_yval;
+			preph <= 19'h10000;
 			end
 		endcase
 	//
@@ -129,90 +129,117 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 	// the needs of our problem, specifically the number of stages and
 	// the number of bits required in our phase accumulator
 	//
-	wire	[18:0]	cordic_angle [0:(NSTAGES-1)];
+	reg	[18:0]	cordic_angle [0:15];
+	reg	[18:0]	cangle;
 
-	assign	cordic_angle[ 0] = 19'h0_9720; //  26.565051 deg
-	assign	cordic_angle[ 1] = 19'h0_4fd9; //  14.036243 deg
-	assign	cordic_angle[ 2] = 19'h0_2888; //   7.125016 deg
-	assign	cordic_angle[ 3] = 19'h0_1458; //   3.576334 deg
-	assign	cordic_angle[ 4] = 19'h0_0a2e; //   1.789911 deg
-	assign	cordic_angle[ 5] = 19'h0_0517; //   0.895174 deg
-	assign	cordic_angle[ 6] = 19'h0_028b; //   0.447614 deg
-	assign	cordic_angle[ 7] = 19'h0_0145; //   0.223811 deg
-	assign	cordic_angle[ 8] = 19'h0_00a2; //   0.111906 deg
-	assign	cordic_angle[ 9] = 19'h0_0051; //   0.055953 deg
-	assign	cordic_angle[10] = 19'h0_0028; //   0.027976 deg
-	assign	cordic_angle[11] = 19'h0_0014; //   0.013988 deg
-	assign	cordic_angle[12] = 19'h0_000a; //   0.006994 deg
-	assign	cordic_angle[13] = 19'h0_0005; //   0.003497 deg
-	assign	cordic_angle[14] = 19'h0_0002; //   0.001749 deg
-	assign	cordic_angle[15] = 19'h0_0001; //   0.000874 deg
+	initial	cordic_angle[ 0] = 19'h0_9720; //  26.565051 deg
+	initial	cordic_angle[ 1] = 19'h0_4fd9; //  14.036243 deg
+	initial	cordic_angle[ 2] = 19'h0_2888; //   7.125016 deg
+	initial	cordic_angle[ 3] = 19'h0_1458; //   3.576334 deg
+	initial	cordic_angle[ 4] = 19'h0_0a2e; //   1.789911 deg
+	initial	cordic_angle[ 5] = 19'h0_0517; //   0.895174 deg
+	initial	cordic_angle[ 6] = 19'h0_028b; //   0.447614 deg
+	initial	cordic_angle[ 7] = 19'h0_0145; //   0.223811 deg
+	initial	cordic_angle[ 8] = 19'h0_00a2; //   0.111906 deg
+	initial	cordic_angle[ 9] = 19'h0_0051; //   0.055953 deg
+	initial	cordic_angle[10] = 19'h0_0028; //   0.027976 deg
+	initial	cordic_angle[11] = 19'h0_0014; //   0.013988 deg
+	initial	cordic_angle[12] = 19'h0_000a; //   0.006994 deg
+	initial	cordic_angle[13] = 19'h0_0005; //   0.003497 deg
+	initial	cordic_angle[14] = 19'h0_0002; //   0.001749 deg
+	initial	cordic_angle[15] = 19'h0_0001; //   0.000874 deg
 	// Std-Dev    : 0.00 (Units)
 	// Phase Quantization: 0.000030 (Radians)
 	// Gain is 1.164435
 	// You can annihilate this gain by multiplying by 32'hdbd95b16
 	// and right shifting by 32 bits.
 
-	genvar	i;
-	generate for(i=0; i<NSTAGES; i=i+1) begin : TOPOLARloop
-		always @(posedge i_clk)
-		// Here's where we are going to put the actual CORDIC
-		// rectangular to polar loop.  Everything up to this
-		// point has simply been necessary preliminaries.
-		if (i_reset)
-		begin
-			xv[i+1] <= 0;
-			yv[i+1] <= 0;
-			ph[i+1] <= 0;
-		end else if (i_ce)
-		begin
-			if ((cordic_angle[i] == 0)||(i >= WW))
-			begin // Do nothing but move our vector
-			// forward one stage, since we have more
-			// stages than valid data
-				xv[i+1] <= xv[i];
-				yv[i+1] <= yv[i];
-				ph[i+1] <= ph[i];
-			end else if (yv[i][(WW-1)]) // Below the axis
-			begin
-				// If the vector is below the x-axis, rotate by
-				// the CORDIC angle in a positive direction.
-				xv[i+1] <= xv[i] - (yv[i]>>>(i+1));
-				yv[i+1] <= yv[i] + (xv[i]>>>(i+1));
-				ph[i+1] <= ph[i] - cordic_angle[i];
-			end else begin
-				// On the other hand, if the vector is above the
-				// x-axis, then rotate in the other direction
-				xv[i+1] <= xv[i] + (yv[i]>>>(i+1));
-				yv[i+1] <= yv[i] - (xv[i]>>>(i+1));
-				ph[i+1] <= ph[i] + cordic_angle[i];
-			end
-		end
-	end endgenerate
+	reg		idle, pre_valid;
+	reg	[4:0]	state;
 
-	// Round our magnitude towards even
-	wire	[(WW-1):0]	pre_mag;
+	wire	last_state;
+	assign	last_state = (state >= 17);
 
-	assign	pre_mag = xv[NSTAGES] + $signed({{(OW){1'b0}},
-				xv[NSTAGES][(WW-OW)],
-				{(WW-OW-1){!xv[NSTAGES][WW-OW]}}});
+	initial	idle = 1'b1;
+	always @(posedge i_clk)
+	if (i_reset)
+		idle <= 1'b1;
+	else if (i_stb)
+		idle <= 1'b0;
+	else if (last_state)
+		idle <= 1'b1;
+
+	initial	pre_valid = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		pre_valid <= 1'b0;
+	else
+		pre_valid <= (i_stb)&&(idle);
+
+	initial	state = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		state <= 0;
+	else if (idle)
+		state <= 0;
+	else if (last_state)
+		state <= 0;
+	else
+		state <= state + 1;
+
+	always @(posedge i_clk)
+		cangle <= cordic_angle[state[3:0]];
+
+	// Here's where we are going to put the actual CORDIC
+	// rectangular to polar loop.  Everything up to this
+	// point has simply been necessary preliminaries.
+	always @(posedge i_clk)
+	if (pre_valid)
+	begin
+		xv <= prex;
+		yv <= prey;
+		ph <= preph;
+	end else if (yv[(WW-1)]) // Below the axis
+	begin
+		// If the vector is below the x-axis, rotate by
+		// the CORDIC angle in a positive direction.
+		xv <= xv - (yv>>>state);
+		yv <= yv + (xv>>>state);
+		ph <= ph - cangle;
+	end else begin
+		// On the other hand, if the vector is above the
+		// x-axis, then rotate in the other direction
+		xv <= xv + (yv>>>state);
+		yv <= yv - (xv>>>state);
+		ph <= ph + cangle;
+	end
 
 	always @(posedge i_clk)
 	if (i_reset)
+		o_done <= 1'b0;
+	else
+		o_done <= (last_state);
+
+	// Round our magnitude towards even
+	wire	[(WW-1):0]	final_mag;
+
+	assign	final_mag = xv + $signed({{(OW){1'b0}},
+				xv[(WW-OW)],
+				{(WW-OW-1){!xv[WW-OW]}}});
+
+	always @(posedge i_clk)
+	if (last_state)
 	begin
-		o_mag   <= 0;
-		o_phase <= 0;
-		o_aux <= 0;
-	end else if (i_ce)
-	begin
-		o_mag   <= pre_mag[(WW-1):(WW-OW)];
-		o_phase <= ph[NSTAGES];
-		o_aux <= ax[NSTAGES];
+		o_mag   <= final_mag[(WW-1):(WW-OW)];
+		o_phase <= ph;
+		o_aux <= aux;
 	end
+
+	assign	o_busy = !idle;
 
 	// Make Verilator happy with pre_.val
 	// verilator lint_off UNUSED
 	wire	[(WW-OW):0] unused_val;
-	assign	unused_val = { pre_mag[WW-1], pre_mag[(WW-OW-1):0] };
+	assign	unused_val = { final_mag[WW-1], final_mag[(WW-OW-1):0] };
 	// verilator lint_on UNUSED
 endmodule

@@ -4,14 +4,15 @@
 //
 // Project:	A series of CORDIC related projects
 //
-// Purpose:	
+// Purpose:	Defines a series of helper or library routines which may be
+// 		used by all of the CORDIC modules.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -40,10 +41,11 @@
 
 #include <stdio.h>
 
+extern	int	nextlg(unsigned);
 extern	double	cordic_gain(int nstages);
 extern	double	phase_variance(int nstages, int phase_bits);
 extern	double	transform_quantization_variance(int nstages, int xtrabits, int dropped_bits);
-extern	void	cordic_angles(FILE *fp, int nstages, int phase_bits);
+extern	void	cordic_angles(FILE *fp, int nstages, int phase_bits, bool mem = false);
 extern	int	calc_stages(const int working_width, const int phase_bits);
 extern	int	calc_stages(const int phase_bits);
 extern	int	calc_phase_bits(const int output_width);

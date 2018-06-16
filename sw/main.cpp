@@ -13,7 +13,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -47,7 +47,9 @@
 
 #include "cordiclib.h"
 #include "topolar.h"
+#include "seqpolar.h"
 #include "basiccordic.h"
+#include "seqcordic.h"
 #include "sintable.h"
 #include "quadtbl.h"
 
@@ -89,7 +91,8 @@ int	main(int argc, char **argv) {
 	bool	with_reset = true, with_aux = true;
 	bool	polar_to_rect = false, rect_to_polar = true, verbose=false,
 		gen_sintable = false, gen_quarterwav = false, c_header = false,
-		gen_quadtbl = false, async_reset = false;
+		gen_quadtbl = false, async_reset = false,
+		sequential = false;
 	int	c;
 	FILE	*fp, *fhp;
 
@@ -139,10 +142,20 @@ int	main(int argc, char **argv) {
 				if (fname == NULL)
 					fname = "topolar.v";
 				rect_to_polar = true;
+			} else if (strcmp(optarg, "sr2p")==0) {
+				if (fname == NULL)
+					fname = "seqpolar.v";
+				rect_to_polar = true;
+				sequential    = true;
 			} else if (strcmp(optarg, "p2r")==0) {
 				if (NULL == fname)
 					fname = "basiccordic.v";
 				polar_to_rect = true;
+			} else if (strcmp(optarg, "sp2r")==0) {
+				if (NULL == fname)
+					fname = "seqcordic.v";
+				polar_to_rect = true;
+				sequential = true;
 			} else if (strcmp(optarg, "tbl")==0) {
 				if (NULL == fname)
 					fname = "sintable.v";
@@ -215,13 +228,14 @@ int	main(int argc, char **argv) {
 			nstages = calc_stages(ww, phase_bits);
 
 		if (verbose) {
-			printf("Building a basic cordic with the following parameters:\n"
+			printf("Building a %s cordic with the following parameters:\n"
 			"\tOutput file     : %s\n"
 			"\tInput  bits     : %2d\n"
 			"\tExtra  bits     : %2d (used in computation, dropped when done)\n"
 			"\tOutput bits     : %2d\n"
 			"\tPhase  bits     : %2d\n"
 			"\tNumber of stages: %2d\n",
+			(sequential)?"sequential":"basic",
 			(fp == stdout)?"(stdout)":fname,
 			iw, nxtra, ow, phase_bits, nstages);
 			if ((with_reset)&&(async_reset))
@@ -232,9 +246,14 @@ int	main(int argc, char **argv) {
 				printf("\tAux bits will be added to the design\n");
 		}
 
-		basiccordic(fp, fhp, fname,
-			nstages, iw, ow, nxtra, phase_bits,
-			with_reset, with_aux, async_reset);
+		if (sequential)
+			seqcordic(fp, fhp, fname,
+				nstages, iw, ow, nxtra, phase_bits,
+				with_reset, with_aux, async_reset);
+		else
+			basiccordic(fp, fhp, fname,
+				nstages, iw, ow, nxtra, phase_bits,
+				with_reset, with_aux, async_reset);
 	} if (rect_to_polar) {
 		if ((iw < 0)&&(ow > 0))
 			iw = ow;
@@ -267,9 +286,14 @@ int	main(int argc, char **argv) {
 				printf("\tAux bits will be added to the design\n");
 		}
 
-		topolar(fp, fhp, fname,
-			nstages, iw, ow, nxtra, phase_bits,
-			with_reset, with_aux, async_reset);
+		if (sequential)
+			seqpolar(fp, fhp, fname,
+				nstages, iw, ow, nxtra, phase_bits,
+				with_reset, with_aux, async_reset);
+		else
+			topolar(fp, fhp, fname,
+				nstages, iw, ow, nxtra, phase_bits,
+				with_reset, with_aux, async_reset);
 	} if (gen_sintable) {
 		if ((iw >= 0)&&(phase_bits < 0)) {
 			phase_bits = iw;

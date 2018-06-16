@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -41,6 +41,25 @@
 #include <assert.h>
 
 #include "cordiclib.h"
+
+// nextlg
+//
+// Returns the ceiling of the log_2 of vl.  Hence,
+//   for 3 the result will be 2
+//   for 4 the result will be 2
+//   for 5 the result will be 3
+//	...
+//   for 7 the result will be 3
+//   for 8 the result will be 3
+//   for 9 the result will be 4
+//
+int	nextlg(unsigned vl) {
+	unsigned	r, lg=0;
+
+	for(r=1; r<vl; r<<=1, lg++)
+		;
+	return lg;
+}
 
 double	cordic_gain(int nstages) {
 	double	gain = 1.0;
@@ -101,7 +120,7 @@ double	transform_quantization_variance(int nstages, int xtrabits, int dropped_bi
 	return current_variance;
 }
 
-void	cordic_angles(FILE *fp, int nstages, int phase_bits) {
+void	cordic_angles(FILE *fp, int nstages, int phase_bits, bool mem) {
 	fprintf(fp,
 		"\t//\n"
 		"\t// In many ways, the key to this whole algorithm lies in the angles\n"
@@ -112,8 +131,15 @@ void	cordic_angles(FILE *fp, int nstages, int phase_bits) {
 		"\t// the needs of our problem, specifically the number of stages and\n"
 		"\t// the number of bits required in our phase accumulator\n"
 		"\t//\n");
-	fprintf(fp, "\twire\t[%d:0]\tcordic_angle [0:(NSTAGES-1)];\n\n",
-	phase_bits-1);
+	if (mem) {
+		nstages = (1<<nextlg(nstages));
+		fprintf(fp, "\treg\t[%d:0]\tcordic_angle [0:%d];\n",
+			phase_bits-1, nstages-1);
+		fprintf(fp, "\treg\t[%d:0]\tcangle;\n\n", phase_bits-1);
+	} else {
+		fprintf(fp, "\twire\t[%d:0]\tcordic_angle [0:(NSTAGES-1)];\n\n",
+			phase_bits-1);
+	}
 
 	// assert(phase_bits <= 32);
 
@@ -132,16 +158,31 @@ void	cordic_angles(FILE *fp, int nstages, int phase_bits) {
 		phase_value = (unsigned)x;
 
 		if (phase_bits <= 16) {
-			fprintf(fp, "\tassign\tcordic_angle[%2d] = %2d\'h%0*lx; //%11.6f deg\n",
-				k, phase_bits, (phase_bits+3)/4, phase_value,
-				deg);
+			if (mem) {
+				fprintf(fp, "\tinitial\tcordic_angle[%2d] = %2d\'h%0*lx; //%11.6f deg\n",
+					k, phase_bits, (phase_bits+3)/4,
+					phase_value, deg);
+			} else {
+				fprintf(fp, "\tassign\tcordic_angle[%2d] = %2d\'h%0*lx; //%11.6f deg\n",
+					k, phase_bits, (phase_bits+3)/4,
+					phase_value, deg);
+			}
 		} else { // if (phase_bits <= 32)
 			unsigned long hibits, lobits;
 			lobits = (phase_value & 0x0ffff);
 			hibits = (phase_value >> 16);
-			fprintf(fp, "\tassign\tcordic_angle[%2d] = %2d\'h%0*lx_%04lx; //%11.6f deg\n",
-				k, phase_bits, (phase_bits-16+3)/4,
-				hibits, lobits, deg);
+
+			if (mem) {
+				fprintf(fp, "\tinitial\tcordic_angle[%2d] "
+					"= %2d\'h%0*lx_%04lx; //%11.6f deg\n",
+					k, phase_bits, (phase_bits-16+3)/4,
+					hibits, lobits, deg);
+			} else {
+				fprintf(fp, "\tassign\tcordic_angle[%2d] "
+					"= %2d\'h%0*lx_%04lx; //%11.6f deg\n",
+					k, phase_bits, (phase_bits-16+3)/4,
+					hibits, lobits, deg);
+			}
 		}
 	}
 
@@ -154,7 +195,6 @@ void	cordic_angles(FILE *fp, int nstages, int phase_bits) {
 			(unsigned)(1.0/cordic_gain(nstages)
 					*(4.0 * (1ul<<30))));
 	fprintf(fp, "\t// and right shifting by 32 bits.\n");
-
 }
 
 int	calc_stages(const int working_width, const int phase_bits) {

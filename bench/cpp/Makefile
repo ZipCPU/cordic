@@ -21,9 +21,17 @@
 ##
 ##		This program depends upon having FFTW installed.
 ##
+##	seqcordic_tb:	This is almost identical to cordic_tb above, save that
+##			the CORDIC is of a sequential (not pipelined)
+##			implementation.  It shares code with cordic_tb.
+##
 ##	topolar_tb:	A test bench for the rectangular to polar coordinate
 ##			conversion form of the cordic.  Prints success or
 ##			failure on the last line.
+##
+##	seqpolar_tb:	As with seqcordic_tb, this is almost identical to
+##			topolar_tb, save that this is a test of the sequential
+##			implementation rather than the parallel one.
 ##
 ##	quadtbl_tb:	Test the quadratic interpolation sinewave generator.
 ##
@@ -57,25 +65,33 @@
 ################################################################################
 ##
 ##
-all: cordic_tb topolar_tb quadtbl_tb
+all: cordic_tb topolar_tb quadtbl_tb seqcordic_tb seqpolar_tb
 CXX  := g++
 RTLD := ../../rtl
 ROBJD:= $(RTLD)/obj_dir
 VERILATOR := verilator
 VERILATOR_ROOT ?= $(shell bash -c '$(VERILATOR) -V|grep VERILATOR_ROOT| head -1|sed -e " s/^.*=\s*//"')
 VROOT:= $(VERILATOR_ROOT)
-INCS := -I$(VROOT)/include -I$(RTLD) -I$(ROBJD)
-VSRCS:= $(VROOT)/include/verilated.cpp $(VROOT)/include/verilated_vcd_c.cpp
-TBOBJ:= $(ROBJD)/Vcordic__ALL.a
-PLOBJ:= $(ROBJD)/Vtopolar__ALL.a
-QTOBJ:= $(ROBJD)/Vquadtbl__ALL.a
-CFLAGS:= -g -Og -Wall $(INCS)
+INCS   := -I$(VROOT)/include -I$(RTLD) -I$(ROBJD)
+VSRCS  := $(VROOT)/include/verilated.cpp $(VROOT)/include/verilated_vcd_c.cpp
+TBOBJ  := $(ROBJD)/Vcordic__ALL.a
+STBOBJ := $(ROBJD)/Vseqcordic__ALL.a
+PLOBJ  := $(ROBJD)/Vtopolar__ALL.a
+SPLOBJ := $(ROBJD)/Vseqpolar__ALL.a
+QTOBJ  := $(ROBJD)/Vquadtbl__ALL.a
+CFLAGS := -g -Og -Wall $(INCS) -faligned-new
 
 cordic_tb:	cordic_tb.cpp $(TBOBJ) $(ROBJD)/Vcordic.h testb.h fft.h fftw.c
 	$(CXX) $(CFLAGS) cordic_tb.cpp fftw.c $(VSRCS) $(TBOBJ) -lfftw3 -o $@
 
+seqcordic_tb:	cordic_tb.cpp $(STBOBJ) $(ROBJD)/Vseqcordic.h testb.h fft.h fftw.c
+	$(CXX) $(CFLAGS) -D CLOCKS_PER_OUTPUT cordic_tb.cpp fftw.c $(VSRCS) $(STBOBJ) -lfftw3 -o $@
+
 topolar_tb:	topolar_tb.cpp $(PLOBJ) $(ROBJD)/Vtopolar.h testb.h
 	$(CXX) $(CFLAGS) topolar_tb.cpp $(VSRCS) $(PLOBJ) -o $@
+
+seqpolar_tb:	topolar_tb.cpp $(SPLOBJ) $(ROBJD)/Vseqpolar.h testb.h
+	$(CXX) $(CFLAGS) -DCLOCKS_PER_OUTPUT topolar_tb.cpp $(VSRCS) $(SPLOBJ) -o $@
 
 quadtbl_tb:	quadtbl_tb.cpp $(PLOBJ) $(ROBJD)/Vquadtbl.h testb.h fft.h fftw.c
 	$(CXX) $(CFLAGS) quadtbl_tb.cpp fftw.c $(VSRCS) $(QTOBJ) -lfftw3 -o $@
