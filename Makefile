@@ -4,14 +4,21 @@
 ##
 ## Project:	A series of CORDIC related projects
 ##
-## Purpose:	To coordinate the build of documentation PDFs from their
-##		LaTeX sources.
+## Purpose:	Provides a master Makefile for the project, coordinating the
+##		build of the core generator, documents, test benches, and
+##	Verilog code.
+##
+##	The core generator is highly configurable.  You can adjust the
+##	configuration parameters in the sw/Makefile, or run it outside of any
+##	Makefile context.
 ##
 ##	Targets include:
-##		all		Builds all documents
-##
-##		lgpl-3.0.pdf	Builds the LGPL license these files are released
-##					under.
+##		all		Builds everything
+##		clean		Removes all build products
+##		doc		Builds the documentation (licenses)
+##		rtl		Runs Verilator on the Verilog files
+##		sw		Builds the core generator
+##		bench		Builds the bench testing software
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -41,37 +48,20 @@
 ################################################################################
 ##
 ##
-all:	pdf
-pdf:	lgpl gpl
-DSRC := src
+.PHONY: all clean doc rtl sw bench
+all:	sw rtl bench
+SUBMAKE := make --no-print-directory -C
 
-LGPL=lgpl-3.0
-.PHONY: lgpl
-lgpl: $(LGPL).pdf
+sw:
+	$(SUBMAKE) sw
 
-$(LGPL).pdf: $(DSRC)/$(LGPL).tex
-	latex $(DSRC)/$(LGPL).tex
-	latex $(DSRC)/$(LGPL).tex
-	dvips -q -z -t letter -P pdf -o $(LGPL).ps $(LGPL).dvi
-	ps2pdf -dAutoRotatePages=/All $(LGPL).ps $(LGPL).pdf
-	rm $(LGPL).dvi $(LGPL).log $(LGPL).aux $(LGPL).ps
+rtl: sw
+	$(SUBMAKE) rtl
 
-GPL=gpl-3.0
-.PHONY: gpl
-gpl: $(GPL).pdf
+bench: rtl
+	$(SUBMAKE) bench/cpp
 
-$(GPL).pdf: $(DSRC)/$(GPL).tex
-	latex $(DSRC)/$(GPL).tex
-	latex $(DSRC)/$(GPL).tex
-	dvips -q -z -t letter -P pdf -o $(GPL).ps $(GPL).dvi
-	ps2pdf -dAutoRotatePages=/All $(GPL).ps $(GPL).pdf
-	rm $(GPL).dvi $(GPL).log $(GPL).aux $(GPL).ps
-
-.PHONY: clean
 clean:
-	rm -f $(DSRC)/*.dvi $(DSRC)/*.log
-	rm -f $(DSRC)/*.aux $(DSRC)/*.toc
-	rm -f $(DSRC)/*.lot $(DSRC)/*.lof
-	rm -f $(DSRC)/*.out spec.ps spec.pdf
-	rm -f $(LGPL).pdf $(GPL).pdf
-
+	$(SUBMAKE) sw        clean
+	$(SUBMAKE) rtl       clean
+	$(SUBMAKE) bench/cpp clean
