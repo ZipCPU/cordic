@@ -79,7 +79,7 @@ STBOBJ := $(ROBJD)/Vseqcordic__ALL.a
 PLOBJ  := $(ROBJD)/Vtopolar__ALL.a
 SPLOBJ := $(ROBJD)/Vseqpolar__ALL.a
 QTOBJ  := $(ROBJD)/Vquadtbl__ALL.a
-CFLAGS := -g -Og -Wall $(INCS) -faligned-new
+CFLAGS := -g -Og -Wall $(INCS) # -faligned-new
 
 cordic_tb:	cordic_tb.cpp $(TBOBJ) $(ROBJD)/Vcordic.h testb.h fft.h fftw.c
 	$(CXX) $(CFLAGS) cordic_tb.cpp fftw.c $(VSRCS) $(TBOBJ) -lfftw3 -o $@

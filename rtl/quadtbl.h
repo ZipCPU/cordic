@@ -38,15 +38,15 @@
 //
 #ifndef	QUADTBL_H
 #define	QUADTBL_H
-const	int	OW         = 24; // bits
+const	int	OW         = 13; // bits
 const	int	NEXTRA     = 3; // bits
-const	int	PW         = 26; // bits
-const	long	TBL_LGSZ  = 9; // (Units)
-const	long	TBL_SZ    = 512; // (Units)
-const	long	SCALE     = 8388606; // (Units)
-const	double	ITBL_ERR  = -0.99; // (OW Units)
-const	double	TBL_ERR   = -0.0000000074027647; // (sin Units)
-const	double	SPURDB    = -162.51; // dB
+const	int	PW         = 18; // bits
+const	long	TBL_LGSZ  = 6; // (Units)
+const	long	TBL_SZ    = 64; // (Units)
+const	long	SCALE     = 4094; // (Units)
+const	double	ITBL_ERR  = -0.25; // (OW Units)
+const	double	TBL_ERR   = -0.0000037981536051; // (sin Units)
+const	double	SPURDB    = -107.97; // dB
 const	bool	HAS_RESET = true;
 const	bool	HAS_AUX   = true;
 #define	HAS_RESET_WIRE

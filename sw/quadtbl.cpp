@@ -344,13 +344,21 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 
 	fprintf(fp,
 	"\tlocalparam\tLGTBL=%d,\n"
-			"\t\t\tDXBITS= (PW-LGTBL)+1,    // %d\n"
+			"\t\t\tDXBITS  = (PW-LGTBL)+1,  // %d\n"
 			"\t\t\tTBLENTRIES = (1<<LGTBL), // %d\n"
-			"\t\t\tQBITS = %d,\n"
-			"\t\t\tLBITS = %d,\n"
-			"\t\t\tCBITS = %d,\n"
-			"\t\t\tWW    = (OW+XTRA); // Working width\n\n",
-			lgtbl, dxbits, (1<<lgtbl), qbits, lbits, cbits);
+			"\t\t\tQBITS   = %d,\n"
+			"\t\t\tLBITS   = %d,\n"
+			"\t\t\tCBITS   = %d,\n"
+			"\t\t\tWW      = (OW+XTRA), // Working width\n"
+			"\t\t\tNSTAGES = %d; // Hard-coded to the algorithm\n\n",
+			lgtbl, dxbits, (1<<lgtbl), qbits, lbits, cbits,
+			(NO_QUADRATIC_COMPONENT)?4:6);
+
+
+	fprintf(fp,
+	"\t//\n"
+	"\t// Space for our coefficients, and their copies as we work through\n"
+	"\t// our processing stages\n");
 
 	if (NO_QUADRATIC_COMPONENT) {
 		fprintf(fp,
@@ -366,9 +374,32 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 		"\treg\tsigned\t[(DXBITS-1):0]\tdx, dx_1, dx_2;\n\n");
 	}
 
+	fprintf(fp, "\t//\n\t//\n");
+	if (!NO_QUADRATIC_COMPONENT)
+		fprintf(fp,
+		"\treg\tsigned\t[(QBITS+DXBITS-1):0]	qprod; // [%d:%d]\n",
+				qbits+dxbits-1, 0);
+	if (with_aux)
+		fprintf(fp,
+		"\treg\t\t[(NSTAGES-1):0]\t\taux;\n");
+
+	if (!NO_QUADRATIC_COMPONENT)
+		fprintf(fp,
+		"\treg\tsigned\t[(LBITS-1):0]\t\tlsum;\n");
 	fprintf(fp,
+		"\treg\tsigned\t[(LBITS+DXBITS-1):0]\tlprod;\n");
+	if (!NO_QUADRATIC_COMPONENT)
+		fprintf(fp,
+		"\twire\t\t[(LBITS-1):0]\t\tw_qprod;\n");
+	fprintf(fp,
+	"\treg	signed	[(CBITS-1):0]		r_value; // %d bits\n"
+	"\twire	signed	[(CBITS-1):0]		w_lprod;\n\n",
+			cbits);
+
+	fprintf(fp,
+	"\t// Coefficient tables:\n"
+	"\t//\tConstant, Linear, and Quadratic\n"
 	"\treg	[(CBITS-1):0]	ctbl [0:(TBLENTRIES-1)]; //=(0...2^(OX)-1)/2^32\n"
-	"\t// ltbl !=\n"
 	"\treg	[(LBITS-1):0]	ltbl [0:(TBLENTRIES-1)]; // %d x %d\n",
 		lbits, (1<<lgtbl));
 
@@ -387,14 +418,8 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 	fprintf(fp,
 		"\tend\n\n");
 
-	fprintf(fp,
-	"\t// aux bit\n"
-	"\tlocalparam	NSTAGES=%d;\n",
-			(NO_QUADRATIC_COMPONENT)?4:6);
-
 	if (with_aux) {
 		fprintf(fp,
-		"\treg	[(NSTAGES-1):0]	aux;\n"
 		"\tinitial	aux = 0;\n");
 
 		fprintf(fp, "%s", always_reset.c_str());
@@ -410,13 +435,27 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 			"\tassign	o_aux = aux[(NSTAGES-1)];\n\n");
 	}
 
-	fprintf(fp, "\t// Clock zero\n");
+	fprintf(fp,
+	"\t////////////////////////////////////////////////////////////////////////\n"
+	"\t//\n"
+	"\t//\n"
+	"\t// Clock 1\n"
+	"\t//	1. Operate on the incoming bits--this is the only stage\n"
+	"\t//	   that does so\n"
+	"\t//	2. Read our coefficients from the table\n"
+	"\t//	3. Store dx, the difference between the table value and the\n"
+	"\t//		actually requested phase, for later processing\n"
+	"\t//\n"
+	"\t//\n");
+
 	fprintf(fp, "%s", always_reset.c_str());
 
 	if (with_reset) {
 		fprintf(fp, "\tbegin\n");
 		if (!NO_QUADRATIC_COMPONENT)
 			fprintf(fp, "\t\tqv <= 0;\n");
+		else
+			fprintf(fp, "\t\t// No quadratic coefficient\n");
 		fprintf(fp,
 			"\t\tlv <= 0;\n"
 			"\t\tcv <= 0;\n"
@@ -429,6 +468,8 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 	"\tbegin\n");
 	if (!NO_QUADRATIC_COMPONENT)
 		fprintf(fp,"\t\tqv <= qtbl[i_phase[(PW-1):(DXBITS-1)]];\n");
+	else
+		fprintf(fp,"\t\t// This build has no quadratic component\n");
 	fprintf(fp,
 	"\t\tlv <= ltbl[i_phase[(PW-1):(DXBITS-1)]];\n"
 	"\t\tcv <= ctbl[i_phase[(PW-1):(DXBITS-1)]];\n"
@@ -451,53 +492,58 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 		(NO_QUADRATIC_COMPONENT) ? "":"Q, ");
 
 	if (!NO_QUADRATIC_COMPONENT) {
+	fprintf(fp,
+	"\t////////////////////////////////////////////////////////////////////////\n"
+	"\t//\n"
+	"\t//\n"
+	"\t// Clock 2\n"
+	"\t//	1. Multiply to get the quadratic component of our design\n"
+	"\t//		This is the first of two multiplies used by this\n"
+	"\t//		algorithm\n"
+	"\t//	2. Everything else is just copied to the next clock\n"
+	"\t//\n"
+	"\t//\n");
+
+		fprintf(fp, "\talways @(posedge i_clk)\n"
+		"\tif (i_ce)\n"
+			"\t\tqprod <= qv * dx; // %d bits\n\n",
+				qbits+dxbits);
+
 		fprintf(fp,
-		"\t// Clock 1\n"
-		"\treg\tsigned\t[(QBITS+DXBITS-1):0]	qprod; // [%d:%d]\n",
-				qbits+dxbits-1, 0);
+		"\tinitial	cv_1 = 0;\n"
+		"\tinitial	lv_1 = 0;\n"
+		"\tinitial	dx_1 = 0;\n");
 
 		fprintf(fp, "%s", always_reset.c_str());
 
-		if (with_reset)
+		if (with_reset) {
 			fprintf(fp,
-			"\t\tqprod <= 0;\n"
-			"\telse ");
+			"\tbegin\n"
+				"\t\tcv_1 <= 0;\n"
+				"\t\tlv_1 <= 0;\n"
+				"\t\tdx_1 <= 0;\n"
+			"\tend else ");
+		}
 
 		fprintf(fp,
-		" if (i_ce)\n"
-			"\t\tqprod <= qv * dx; // %d bits\n\n",
-				qbits+dxbits);
+			"if (i_ce) begin\n"
+				"\t\tcv_1 <= cv;\n"
+				"\t\tlv_1 <= lv;\n"
+				"\t\tdx_1 <= dx;\n"
+			"\tend\n\n");
 	}
-
-	fprintf(fp,
-	"\tinitial	cv_1 = 0;\n"
-	"\tinitial	lv_1 = 0;\n"
-	"\tinitial	dx_1 = 0;\n");
-
-	fprintf(fp, "%s", always_reset.c_str());
-
-	if (with_reset) {
-		fprintf(fp,
-		"\tbegin\n"
-			"\t\tcv_1 <= 0;\n"
-			"\t\tlv_1 <= 0;\n"
-			"\t\tdx_1 <= 0;\n"
-		"\tend else ");
-	}
-
-	fprintf(fp,
-		"if (i_ce) begin\n"
-			"\t\tcv_1 <= cv;\n"
-			"\t\tlv_1 <= lv;\n"
-			"\t\tdx_1 <= dx;\n"
-		"\tend\n\n");
 
 	if (!NO_QUADRATIC_COMPONENT) {
 		fprintf(fp,
-		"\t// Clock %d\n"
-		"\treg\tsigned [(LBITS-1):0]\tlsum;\n"
-		"\twire\t[(LBITS-1):0]\tw_qprod;\n",
-			(NO_QUADRATIC_COMPONENT)?1:2);
+		"\t////////////////////////////////////////////////////////////////////////\n"
+		"\t//\n"
+		"\t//\n"
+		"\t// Clock 3\n"
+		"\t//	1. Select the number of bits we want from the output\n"
+		"\t//	2. Add our linear term to the result of the multiply\n"
+		"\t//	3. Copy the remaining values for the next clock\n"
+		"\t//\n"
+		"\t//\n");
 
 		if (lbits-qbits-1>0) {
 			fprintf(fp,
@@ -531,17 +577,22 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 			"\tend\n\n");
 	}
 
+
 	fprintf(fp,
+	"\t////////////////////////////////////////////////////////////////////////\n"
+	"\t//\n"
+	"\t//\n"
 	"\t// Clock %d\n"
-	"\treg\tsigned\t[(LBITS+DXBITS-1):0]\tlprod;\n",
-			(NO_QUADRATIC_COMPONENT)?1:2);
-	fprintf(fp, "%s", always_reset.c_str());
-	if (with_reset)
-		fprintf(fp,
-			"\t\tlprod <= 0;\n"
-			"\telse ");
+	"\t//	1. Our %s multiply\n"
+	"\t//	2. Copy the constant coefficient value to the next clock\n"
+	"\t//\n"
+	"\t//\n",
+		(NO_QUADRATIC_COMPONENT) ? 2 : 4,
+		(NO_QUADRATIC_COMPONENT) ? "only" : "second and final");
+
 	fprintf(fp,
-		"if (i_ce)\n"
+	"\talways @(posedge i_clk)\n"
+	"\tif (i_ce)\n"
 			"\t\tlprod <= %s * dx%s; // %d bits\n\n",
 			(NO_QUADRATIC_COMPONENT)?"lv":"lsum",
 			(NO_QUADRATIC_COMPONENT)?"":"_2",
@@ -562,18 +613,23 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 			(NO_QUADRATIC_COMPONENT)?1:3,
 			(NO_QUADRATIC_COMPONENT)?"":"_2");
 
+	fprintf(fp,
+	"\t////////////////////////////////////////////////////////////////////////\n"
+	"\t//\n"
+	"\t//\n"
+	"\t// Clock %d\n"
+	"\t//	1. Add the constant value to the result of the last\n"
+	"\t//	   multiplication.  This will be the output of our algorithm\n"
+	"\t//	2. There's nothing left to copy\n"
+	"\t//\n"
+	"\t//\n", NO_QUADRATIC_COMPONENT ? 3: 5);
+
 //
 // TBLSZ	LBITS
 //	16	26
 //	32	25
 //	64	24	Too large
 //
-	fprintf(fp,
-	"\t// Clock %d\n"
-	"\treg	signed	[(CBITS-1):0]		r_value; // %d bits\n"
-	"\twire	signed	[(CBITS-1):0]		w_lprod;\n",
-			(NO_QUADRATIC_COMPONENT)?2:4,
-			cbits);
 	if (cbits-lbits-1>0) {
 		fprintf(fp,
 	"\tassign	w_lprod[(CBITS-1):(LBITS+1)] = { (%d){lprod[(LBITS+DXBITS-1)]} };\n",
@@ -582,13 +638,6 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 	fprintf(fp,
 	"\tassign	w_lprod[(LBITS):0] = lprod[(LBITS+DXBITS-1):(DXBITS-1)]; // %d bits\n",
 			lbits);
-/*
-	if (cbits-lbits>0) {
-		fprintf(fp,
-		"\tassign\tw_lprod[(CBITS-LBITS-1):0] = 0; // [%d:%d]\n",
-			cbits-lbits-1,0);
-	}
-*/
 
 	fprintf(fp,
 	"\tinitial	r_value = 0;\n");
@@ -603,7 +652,22 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 			(NO_QUADRATIC_COMPONENT)?1:3);
 
 	fprintf(fp,
-	"\t// Clock %d - round the output\n"
+	"\t////////////////////////////////////////////////////////////////////////\n"
+	"\t//\n"
+	"\t//\n"
+	"\t// Clock %d\n"
+	"\t//	1. The last and final step is to round the output to the\n"
+	"\t//	   nearest value.  This also involves dropping the extra bits\n"
+	"\t//	   we've been carrying around since the last multiply.\n"
+	"\t//\n"
+	"\t//\n\n", NO_QUADRATIC_COMPONENT ? 4: 6);
+
+	fprintf(fp,
+	"\t// Since we won't be using all of the bits in w_value, we'll just\n"
+	"\t// mark them all as unused for Verilator's linting purposes\n"
+	"\t//\n");
+
+	fprintf(fp,
 	"\t// verilator lint_off UNUSED\n"
 	"\twire	[(WW-1):0]	w_value;\n"
 	"\talways @(*)\n"
@@ -615,9 +679,14 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 	"\t\t\tw_value = r_value + { {(OW){1'b0}},\n"
 				"\t\t\t\tr_value[(WW-OW)],\n"
 				"\t\t\t\t{(WW-OW-1){!r_value[(WW-OW)]}} };\n"
-	"\t// verilator lint_on  UNUSED\n"
-	"\tinitial	o_sin = 0;\n",
-			(NO_QUADRATIC_COMPONENT)?3:5);
+	"\t// verilator lint_on  UNUSED\n\n");
+
+	fprintf(fp,
+	"\t//\n"
+	"\t//\n"
+	"\t// Calculate the final result\n"
+	"\t//\n"
+	"\tinitial	o_sin = 0;\n");
 
 	fprintf(fp, "%s", always_reset.c_str());
 	if (with_reset)

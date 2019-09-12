@@ -42,12 +42,12 @@
 //
 module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 		o_mag, o_phase, o_aux);
-	localparam	IW=12,	// The number of bits in our inputs
-			OW=12,// The number of output bits to produce
-			NSTAGES=16,
-			XTRA= 3,// Extra bits for internal precision
-			WW=18,	// Our working bit-width
-			PW=19;	// Bits in our phase variables
+	localparam	IW=13,	// The number of bits in our inputs
+			OW=13,// The number of output bits to produce
+			NSTAGES=18,
+			XTRA= 4,// Extra bits for internal precision
+			WW=21,	// Our working bit-width
+			PW=21;	// Bits in our phase variables
 	input					i_clk, i_reset, i_ce;
 	input	wire	signed	[(IW-1):0]	i_xval, i_yval;
 	output	reg	signed	[(OW-1):0]	o_mag;
@@ -100,23 +100,23 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 		2'b01: begin // Rotate by -315 degrees
 			xv[0] <=  e_xval - e_yval;
 			yv[0] <=  e_xval + e_yval;
-			ph[0] <= 19'h70000;
+			ph[0] <= 21'h1c0000;
 			end
 		2'b10: begin // Rotate by -135 degrees
 			xv[0] <= -e_xval + e_yval;
 			yv[0] <= -e_xval - e_yval;
-			ph[0] <= 19'h30000;
+			ph[0] <= 21'hc0000;
 			end
 		2'b11: begin // Rotate by -225 degrees
 			xv[0] <= -e_xval - e_yval;
 			yv[0] <=  e_xval - e_yval;
-			ph[0] <= 19'h50000;
+			ph[0] <= 21'h140000;
 			end
 		// 2'b00:
 		default: begin // Rotate by -45 degrees
 			xv[0] <=  e_xval + e_yval;
 			yv[0] <= -e_xval + e_yval;
-			ph[0] <= 19'h10000;
+			ph[0] <= 21'h40000;
 			end
 		endcase
 	//
@@ -128,26 +128,28 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 	// the needs of our problem, specifically the number of stages and
 	// the number of bits required in our phase accumulator
 	//
-	wire	[18:0]	cordic_angle [0:(NSTAGES-1)];
+	wire	[20:0]	cordic_angle [0:(NSTAGES-1)];
 
-	assign	cordic_angle[ 0] = 19'h0_9720; //  26.565051 deg
-	assign	cordic_angle[ 1] = 19'h0_4fd9; //  14.036243 deg
-	assign	cordic_angle[ 2] = 19'h0_2888; //   7.125016 deg
-	assign	cordic_angle[ 3] = 19'h0_1458; //   3.576334 deg
-	assign	cordic_angle[ 4] = 19'h0_0a2e; //   1.789911 deg
-	assign	cordic_angle[ 5] = 19'h0_0517; //   0.895174 deg
-	assign	cordic_angle[ 6] = 19'h0_028b; //   0.447614 deg
-	assign	cordic_angle[ 7] = 19'h0_0145; //   0.223811 deg
-	assign	cordic_angle[ 8] = 19'h0_00a2; //   0.111906 deg
-	assign	cordic_angle[ 9] = 19'h0_0051; //   0.055953 deg
-	assign	cordic_angle[10] = 19'h0_0028; //   0.027976 deg
-	assign	cordic_angle[11] = 19'h0_0014; //   0.013988 deg
-	assign	cordic_angle[12] = 19'h0_000a; //   0.006994 deg
-	assign	cordic_angle[13] = 19'h0_0005; //   0.003497 deg
-	assign	cordic_angle[14] = 19'h0_0002; //   0.001749 deg
-	assign	cordic_angle[15] = 19'h0_0001; //   0.000874 deg
+	assign	cordic_angle[ 0] = 21'h02_5c80; //  26.565051 deg
+	assign	cordic_angle[ 1] = 21'h01_3f67; //  14.036243 deg
+	assign	cordic_angle[ 2] = 21'h00_a222; //   7.125016 deg
+	assign	cordic_angle[ 3] = 21'h00_5161; //   3.576334 deg
+	assign	cordic_angle[ 4] = 21'h00_28ba; //   1.789911 deg
+	assign	cordic_angle[ 5] = 21'h00_145e; //   0.895174 deg
+	assign	cordic_angle[ 6] = 21'h00_0a2f; //   0.447614 deg
+	assign	cordic_angle[ 7] = 21'h00_0517; //   0.223811 deg
+	assign	cordic_angle[ 8] = 21'h00_028b; //   0.111906 deg
+	assign	cordic_angle[ 9] = 21'h00_0145; //   0.055953 deg
+	assign	cordic_angle[10] = 21'h00_00a2; //   0.027976 deg
+	assign	cordic_angle[11] = 21'h00_0051; //   0.013988 deg
+	assign	cordic_angle[12] = 21'h00_0028; //   0.006994 deg
+	assign	cordic_angle[13] = 21'h00_0014; //   0.003497 deg
+	assign	cordic_angle[14] = 21'h00_000a; //   0.001749 deg
+	assign	cordic_angle[15] = 21'h00_0005; //   0.000874 deg
+	assign	cordic_angle[16] = 21'h00_0002; //   0.000437 deg
+	assign	cordic_angle[17] = 21'h00_0001; //   0.000219 deg
 	// Std-Dev    : 0.00 (Units)
-	// Phase Quantization: 0.000030 (Radians)
+	// Phase Quantization: 0.000008 (Radians)
 	// Gain is 1.164435
 	// You can annihilate this gain by multiplying by 32'hdbd95b16
 	// and right shifting by 32 bits.

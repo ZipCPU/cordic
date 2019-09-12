@@ -41,18 +41,18 @@
 #ifdef	CLOCKS_PER_OUTPUT
 #undef	CLOCKS_PER_OUTPUT
 #endif	// CLOCKS_PER_OUTPUT
-#define	CLOCKS_PER_OUTPUT	16
+#define	CLOCKS_PER_OUTPUT	17
 
-const int	IW = 12;
-const int	OW = 12;
+const int	IW = 13;
+const int	OW = 13;
 const int	NEXTRA = 3;
-const int	WW = 15;
-const int	PW = 19;
-const int	NSTAGES = 15;
-const double	QUANTIZATION_VARIANCE = 2.7504e-01; // (Units^2)
-const double	PHASE_VARIANCE_RAD = 8.7713e-10; // (Radians^2)
-const double	GAIN = 1.1644353453251708;
-const double	BEST_POSSIBLE_CNR = 72.98;
+const int	WW = 16;
+const int	PW = 20;
+const int	NSTAGES = 16;
+const double	QUANTIZATION_VARIANCE = 2.8025e-01; // (Units^2)
+const double	PHASE_VARIANCE_RAD = 2.1773e-10; // (Radians^2)
+const double	GAIN = 1.1644353454607288;
+const double	BEST_POSSIBLE_CNR = 78.92;
 const bool	HAS_RESET = true;
 const bool	HAS_AUX   = true;
 #define	HAS_RESET_WIRE

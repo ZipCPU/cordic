@@ -42,12 +42,12 @@
 //
 module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 		o_xval, o_yval, o_aux);
-	localparam	IW=12,	// The number of bits in our inputs
-			OW=12,	// The number of output bits to produce
-			NSTAGES=15,
+	localparam	IW=13,	// The number of bits in our inputs
+			OW=13,	// The number of output bits to produce
+			NSTAGES=16,
 			XTRA= 3,// Extra bits for internal precision
-			WW=15,	// Our working bit-width
-			PW=19;	// Bits in our phase variables
+			WW=16,	// Our working bit-width
+			PW=20;	// Bits in our phase variables
 	input	wire				i_clk, i_reset, i_ce;
 	input	wire	signed	[(IW-1):0]		i_xval, i_yval;
 	input	wire		[(PW-1):0]			i_phase;
@@ -110,32 +110,32 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 		3'b001: begin	// 45 .. 90
 			xv[0] <= -e_yval;
 			yv[0] <= e_xval;
-			ph[0] <= i_phase - 19'h20000;
+			ph[0] <= i_phase - 20'h40000;
 			end
 		3'b010: begin	// 90 .. 135
 			xv[0] <= -e_yval;
 			yv[0] <= e_xval;
-			ph[0] <= i_phase - 19'h20000;
+			ph[0] <= i_phase - 20'h40000;
 			end
 		3'b011: begin	// 135 .. 180
 			xv[0] <= -e_xval;
 			yv[0] <= -e_yval;
-			ph[0] <= i_phase - 19'h40000;
+			ph[0] <= i_phase - 20'h80000;
 			end
 		3'b100: begin	// 180 .. 225
 			xv[0] <= -e_xval;
 			yv[0] <= -e_yval;
-			ph[0] <= i_phase - 19'h40000;
+			ph[0] <= i_phase - 20'h80000;
 			end
 		3'b101: begin	// 225 .. 270
 			xv[0] <= e_yval;
 			yv[0] <= -e_xval;
-			ph[0] <= i_phase - 19'h60000;
+			ph[0] <= i_phase - 20'hc0000;
 			end
 		3'b110: begin	// 270 .. 315
 			xv[0] <= e_yval;
 			yv[0] <= -e_xval;
-			ph[0] <= i_phase - 19'h60000;
+			ph[0] <= i_phase - 20'hc0000;
 			end
 		3'b111: begin	// 315 .. 360, No change
 			xv[0] <= e_xval;
@@ -154,27 +154,28 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 	// the needs of our problem, specifically the number of stages and
 	// the number of bits required in our phase accumulator
 	//
-	wire	[18:0]	cordic_angle [0:(NSTAGES-1)];
+	wire	[19:0]	cordic_angle [0:(NSTAGES-1)];
 
-	assign	cordic_angle[ 0] = 19'h0_9720; //  26.565051 deg
-	assign	cordic_angle[ 1] = 19'h0_4fd9; //  14.036243 deg
-	assign	cordic_angle[ 2] = 19'h0_2888; //   7.125016 deg
-	assign	cordic_angle[ 3] = 19'h0_1458; //   3.576334 deg
-	assign	cordic_angle[ 4] = 19'h0_0a2e; //   1.789911 deg
-	assign	cordic_angle[ 5] = 19'h0_0517; //   0.895174 deg
-	assign	cordic_angle[ 6] = 19'h0_028b; //   0.447614 deg
-	assign	cordic_angle[ 7] = 19'h0_0145; //   0.223811 deg
-	assign	cordic_angle[ 8] = 19'h0_00a2; //   0.111906 deg
-	assign	cordic_angle[ 9] = 19'h0_0051; //   0.055953 deg
-	assign	cordic_angle[10] = 19'h0_0028; //   0.027976 deg
-	assign	cordic_angle[11] = 19'h0_0014; //   0.013988 deg
-	assign	cordic_angle[12] = 19'h0_000a; //   0.006994 deg
-	assign	cordic_angle[13] = 19'h0_0005; //   0.003497 deg
-	assign	cordic_angle[14] = 19'h0_0002; //   0.001749 deg
+	assign	cordic_angle[ 0] = 20'h1_2e40; //  26.565051 deg
+	assign	cordic_angle[ 1] = 20'h0_9fb3; //  14.036243 deg
+	assign	cordic_angle[ 2] = 20'h0_5111; //   7.125016 deg
+	assign	cordic_angle[ 3] = 20'h0_28b0; //   3.576334 deg
+	assign	cordic_angle[ 4] = 20'h0_145d; //   1.789911 deg
+	assign	cordic_angle[ 5] = 20'h0_0a2f; //   0.895174 deg
+	assign	cordic_angle[ 6] = 20'h0_0517; //   0.447614 deg
+	assign	cordic_angle[ 7] = 20'h0_028b; //   0.223811 deg
+	assign	cordic_angle[ 8] = 20'h0_0145; //   0.111906 deg
+	assign	cordic_angle[ 9] = 20'h0_00a2; //   0.055953 deg
+	assign	cordic_angle[10] = 20'h0_0051; //   0.027976 deg
+	assign	cordic_angle[11] = 20'h0_0028; //   0.013988 deg
+	assign	cordic_angle[12] = 20'h0_0014; //   0.006994 deg
+	assign	cordic_angle[13] = 20'h0_000a; //   0.003497 deg
+	assign	cordic_angle[14] = 20'h0_0005; //   0.001749 deg
+	assign	cordic_angle[15] = 20'h0_0002; //   0.000874 deg
 	// Std-Dev    : 0.00 (Units)
-	// Phase Quantization: 0.000030 (Radians)
+	// Phase Quantization: 0.000015 (Radians)
 	// Gain is 1.164435
-	// You can annihilate this gain by multiplying by 32'hdbd95b17
+	// You can annihilate this gain by multiplying by 32'hdbd95b16
 	// and right shifting by 32 bits.
 
 	genvar	i;

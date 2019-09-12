@@ -74,6 +74,9 @@ PROGRAMS:= gencordic
 CRDCARGS := -v -c
 all: $(PROGRAMS) $(VSRC)
 INCS :=
+PB   := 18	# Phase bits
+NB   := 13
+XTRA := 2
 
 %.o: $(OBJDIR)/%.o
 $(OBJDIR)/%.o: %.cpp
@@ -95,14 +98,14 @@ topolar: $(VSRCD)/topolar.v
 topolar.v: topolar
 $(VSRCD)/topolar.v: gencordic
 	$(mk-rtldir)
-	./gencordic $(CRDCARGS) -f $(VSRCD)/topolar.v -i 12 -o 12 -t r2p -x 1
+	./gencordic $(CRDCARGS) -f $(VSRCD)/topolar.v -i $(NB) -o $(NB) -t r2p -x $(XTRA)
 
 .PHONY: seqpolar seqpolar.v
 seqpolar: $(VSRCD)/seqpolar.v
 seqpolar.v: seqpolar
 $(VSRCD)/seqpolar.v: gencordic
 	$(mk-rtldir)
-	./gencordic $(CRDCARGS) -f $(VSRCD)/seqpolar.v -i 12 -o 12 -t sr2p -x 1
+	./gencordic $(CRDCARGS) -f $(VSRCD)/seqpolar.v -i $(NB) -o $(NB) -t sr2p -x $(XTRA)
 
 .PHONY: basiccordic cordic.v cordic
 basiccordic: $(VSRCD)/cordic.v
@@ -110,7 +113,7 @@ cordic: basiccordic
 cordic.v: basiccordic
 $(VSRCD)/cordic.v: gencordic
 	$(mk-rtldir)
-	./gencordic -f $(VSRCD)/cordic.v  -v -i 12 -o 12 -t p2r -x 2 -c
+	./gencordic -f $(VSRCD)/cordic.v  -v -i $(NB) -o $(NB) -t p2r -x 2 -c
 	# ./gencordic $(CRDCARGS) -f $(VSRCD)/cordic.v -i 24 -o 24 -t p2r -x 1
 
 .PHONY: seqcordic cordic.v cordic
@@ -119,28 +122,28 @@ scordic: seqcordic
 seqcordic.v: seqcordic
 $(VSRCD)/seqcordic.v: gencordic
 	$(mk-rtldir)
-	./gencordic -f $(VSRCD)/seqcordic.v  -v -i 12 -o 12 -t sp2r -x 2 -c
+	./gencordic -f $(VSRCD)/seqcordic.v  -v -i $(NB) -o $(NB) -t sp2r -x $(XTRA) -c
 
 .PHONY: sintable sintable.v
 sintable: $(VSRCD)/sintable.v
 sintable.v: sintable
 $(VSRCD)/sintable.v: gencordic
 	$(mk-rtldir)
-	./gencordic $(CRDCARGS) -f $(VSRCD)/sintable.v -o 12 -t tbl
+	./gencordic $(CRDCARGS) -f $(VSRCD)/sintable.v -o $(NB) -t tbl
 
 .PHONY: quarterwav quarterwav.v
 quarterwav: $(VSRCD)/quarterwav.v
 quarterwav.v: quarterwav
 $(VSRCD)/quarterwav.v: gencordic
 	$(mk-rtldir)
-	./gencordic $(CRDCARGS) -f $(VSRCD)/quarterwav.v -p 14 -t qtr
+	./gencordic $(CRDCARGS) -f $(VSRCD)/quarterwav.v -p $(PB) -t qtr -x $(XTRA)
 
 .PHONY: quadtbl quadtbl.v
 quadtbl: $(VSRCD)/quadtbl.v
 quadtbl.v: quadtbl
 $(VSRCD)/quadtbl.v: gencordic
 	$(mk-rtldir)
-	./gencordic $(CRDCARGS) -f $(VSRCD)/quadtbl.v -p 26 -o 24 -t qtbl
+	./gencordic $(CRDCARGS) -f $(VSRCD)/quadtbl.v -p $(PB) -o $(NB) -t qtbl
 
 .PHONY: clean
 clean:

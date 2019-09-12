@@ -40,8 +40,8 @@
 `default_nettype	none
 //
 module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
-	localparam	PW=26,	// Bits in our phase variable
-			OW=24,  // The number of output bits to produce
+	localparam	PW=18,	// Bits in our phase variable
+			OW=13,  // The number of output bits to produce
 			XTRA= 3;// Extra bits for internal precision
 	input	wire				i_clk, i_reset, i_ce, i_aux;
 	//
@@ -49,24 +49,39 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	output	reg	signed	[(OW-1):0]	o_sin;
 	output	reg				o_aux;
 
-	localparam	LGTBL=9,
-			DXBITS= (PW-LGTBL)+1,    // 16
-			TBLENTRIES = (1<<LGTBL), // 512
-			QBITS = 14,
-			LBITS = 21,
-			CBITS = 27,
-			WW    = (OW+XTRA); // Working width
+	localparam	LGTBL=6,
+			DXBITS  = (PW-LGTBL)+1,  // 13
+			TBLENTRIES = (1<<LGTBL), // 64
+			QBITS   = 9,
+			LBITS   = 13,
+			CBITS   = 16,
+			WW      = (OW+XTRA), // Working width
+			NSTAGES = 6; // Hard-coded to the algorithm
 
+	//
+	// Space for our coefficients, and their copies as we work through
+	// our processing stages
 	reg	signed	[(CBITS-1):0]	cv,
 					cv_1, cv_2, cv_3;
 	reg	signed	[(LBITS-1):0]	lv, lv_1;
 	reg	signed	[(QBITS-1):0]	qv;
 	reg	signed	[(DXBITS-1):0]	dx, dx_1, dx_2;
 
+	//
+	//
+	reg	signed	[(QBITS+DXBITS-1):0]	qprod; // [21:0]
+	reg		[(NSTAGES-1):0]		aux;
+	reg	signed	[(LBITS-1):0]		lsum;
+	reg	signed	[(LBITS+DXBITS-1):0]	lprod;
+	wire		[(LBITS-1):0]		w_qprod;
+	reg	signed	[(CBITS-1):0]		r_value; // 16 bits
+	wire	signed	[(CBITS-1):0]		w_lprod;
+
+	// Coefficient tables:
+	//	Constant, Linear, and Quadratic
 	reg	[(CBITS-1):0]	ctbl [0:(TBLENTRIES-1)]; //=(0...2^(OX)-1)/2^32
-	// ltbl !=
-	reg	[(LBITS-1):0]	ltbl [0:(TBLENTRIES-1)]; // 21 x 512
-	reg	[(QBITS-1):0]	qtbl [0:(TBLENTRIES-1)]; // 14 x 512
+	reg	[(LBITS-1):0]	ltbl [0:(TBLENTRIES-1)]; // 13 x 64
+	reg	[(QBITS-1):0]	qtbl [0:(TBLENTRIES-1)]; // 9 x 64
 
 	initial begin
 		$readmemh("quadtbl_ctbl.hex", ctbl);
@@ -74,9 +89,6 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 		$readmemh("quadtbl_qtbl.hex", qtbl);
 	end
 
-	// aux bit
-	localparam	NSTAGES=6;
-	reg	[(NSTAGES-1):0]	aux;
 	initial	aux = 0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -85,7 +97,17 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 			aux <= { aux[(NSTAGES-2):0], i_aux };
 	assign	o_aux = aux[(NSTAGES-1)];
 
-	// Clock zero
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+	// Clock 1
+	//	1. Operate on the incoming bits--this is the only stage
+	//	   that does so
+	//	2. Read our coefficients from the table
+	//	3. Store dx, the difference between the table value and the
+	//		actually requested phase, for later processing
+	//
+	//
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
@@ -109,13 +131,19 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	// A basic quadratic interpolant.  All of the smarts are found within
 	// the Q, L, and C values.
 
-	// Clock 1
-	reg	signed	[(QBITS+DXBITS-1):0]	qprod; // [29:0]
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+	// Clock 2
+	//	1. Multiply to get the quadratic component of our design
+	//		This is the first of two multiplies used by this
+	//		algorithm
+	//	2. Everything else is just copied to the next clock
+	//
+	//
 	always @(posedge i_clk)
-	if (i_reset)
-		qprod <= 0;
-	else  if (i_ce)
-		qprod <= qv * dx; // 30 bits
+	if (i_ce)
+		qprod <= qv * dx; // 22 bits
 
 	initial	cv_1 = 0;
 	initial	lv_1 = 0;
@@ -132,17 +160,23 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 		dx_1 <= dx;
 	end
 
-	// Clock 2
-	reg	signed [(LBITS-1):0]	lsum;
-	wire	[(LBITS-1):0]	w_qprod;
-	assign	w_qprod[(LBITS-1):(QBITS+1)] = { (6){qprod[(QBITS+DXBITS-1)]} };
-	assign	w_qprod[QBITS:0] // 15
-			= qprod[(QBITS+DXBITS-1):(DXBITS-1)]; // [29:15]
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+	// Clock 3
+	//	1. Select the number of bits we want from the output
+	//	2. Add our linear term to the result of the multiply
+	//	3. Copy the remaining values for the next clock
+	//
+	//
+	assign	w_qprod[(LBITS-1):(QBITS+1)] = { (3){qprod[(QBITS+DXBITS-1)]} };
+	assign	w_qprod[QBITS:0] // 10
+			= qprod[(QBITS+DXBITS-1):(DXBITS-1)]; // [21:12]
 	always @(posedge i_clk)
 	if (i_reset)
 		lsum <= 0;
 	else if (i_ce)
-		lsum <= w_qprod + lv_1; // 22 bits
+		lsum <= w_qprod + lv_1; // 14 bits
 
 	always @(posedge i_clk)
 	if (i_reset)
@@ -154,13 +188,17 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 		dx_2 <= dx_1;
 	end
 
-	// Clock 2
-	reg	signed	[(LBITS+DXBITS-1):0]	lprod;
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+	// Clock 4
+	//	1. Our second and final multiply
+	//	2. Copy the constant coefficient value to the next clock
+	//
+	//
 	always @(posedge i_clk)
-	if (i_reset)
-		lprod <= 0;
-	else if (i_ce)
-		lprod <= lsum * dx_2; // 38 bits
+	if (i_ce)
+		lprod <= lsum * dx_2; // 27 bits
 
 	initial	cv_3 = 0;
 	always @(posedge i_clk)
@@ -169,11 +207,17 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	else if (i_ce)
 		cv_3 <= cv_2;
 
-	// Clock 4
-	reg	signed	[(CBITS-1):0]		r_value; // 27 bits
-	wire	signed	[(CBITS-1):0]		w_lprod;
-	assign	w_lprod[(CBITS-1):(LBITS+1)] = { (5){lprod[(LBITS+DXBITS-1)]} };
-	assign	w_lprod[(LBITS):0] = lprod[(LBITS+DXBITS-1):(DXBITS-1)]; // 21 bits
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+	// Clock 5
+	//	1. Add the constant value to the result of the last
+	//	   multiplication.  This will be the output of our algorithm
+	//	2. There's nothing left to copy
+	//
+	//
+	assign	w_lprod[(CBITS-1):(LBITS+1)] = { (2){lprod[(LBITS+DXBITS-1)]} };
+	assign	w_lprod[(LBITS):0] = lprod[(LBITS+DXBITS-1):(DXBITS-1)]; // 13 bits
 	initial	r_value = 0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -181,7 +225,19 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	else if (i_ce)
 		r_value <= w_lprod + cv_3;
 
-	// Clock 5 - round the output
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+	// Clock 6
+	//	1. The last and final step is to round the output to the
+	//	   nearest value.  This also involves dropping the extra bits
+	//	   we've been carrying around since the last multiply.
+	//
+	//
+
+	// Since we won't be using all of the bits in w_value, we'll just
+	// mark them all as unused for Verilator's linting purposes
+	//
 	// verilator lint_off UNUSED
 	wire	[(WW-1):0]	w_value;
 	always @(*)
@@ -194,12 +250,17 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 				r_value[(WW-OW)],
 				{(WW-OW-1){!r_value[(WW-OW)]}} };
 	// verilator lint_on  UNUSED
+
+	//
+	//
+	// Calculate the final result
+	//
 	initial	o_sin = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		o_sin <= 0;
 	else if (i_ce)
-		o_sin <= w_value[(WW-1):XTRA]; // [30:3]
+		o_sin <= w_value[(WW-1):XTRA]; // [19:3]
 
 	// Make verilator happy
 	// verilator lint_off UNUSED

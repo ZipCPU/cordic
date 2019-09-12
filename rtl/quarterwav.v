@@ -41,7 +41,7 @@
 //
 module	quarterwav(i_clk, i_reset, i_ce, i_phase, i_aux, o_val, o_aux);
 	//
-	parameter	PW =14, // Number of bits in the input phase
+	parameter	PW =18, // Number of bits in the input phase
 			OW =24; // Number of output bits
 	//
 	input				i_clk, i_reset, i_ce;

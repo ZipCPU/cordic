@@ -40,8 +40,8 @@
 //
 module	sintable(i_clk, i_reset, i_ce, i_aux, i_phase, o_val, o_aux);
 	//
-	parameter	PW =16, // Number of bits in the input phase
-			OW =12; // Number of output bits
+	parameter	PW =17, // Number of bits in the input phase
+			OW =13; // Number of output bits
 	//
 	input	wire			i_clk, i_reset, i_ce;
 	input	wire	[(PW-1):0]	i_phase;
