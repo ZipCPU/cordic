@@ -12,7 +12,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -171,6 +171,20 @@ int main(int  argc, char **argv) {
 		}
 	}
 #endif
+
+	if (false) {
+		FILE *fdbg = fopen("cordicdbg.dbl","w");
+		for(int k=0; k<NSAMPLES; k++) {
+			int	wv[5];
+			wv[0] = pdata[k];
+			wv[1] = ixval[k];
+			wv[2] = iyval[k];
+			wv[3] = xval[k];
+			wv[4] = yval[k];
+			fwrite(wv, sizeof(int), 5, fdbg);
+		}
+		fclose(fdbg);
+	}
 
 	double	mxerr = 0.0, averr = 0.0, mag = 0, imag=0, sumxy = 0.0,
 		sumsq = 0.0, sumd = 0.0;
