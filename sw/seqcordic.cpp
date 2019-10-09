@@ -13,7 +13,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2018, Gisselquist Technology, LLC
+// Copyright (C) 2018-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -157,6 +157,8 @@ void	seqcordic(FILE *fp, FILE *fhp, const char *fname,
 "\treg\t\taux;\n"
 "\n");
 
+		fprintf(fp,
+			"\tinitial\taux = 0;\n");
 		fprintf(fp, "%s", always_reset.c_str());
 
 		if (with_reset)
@@ -318,13 +320,15 @@ void	seqcordic(FILE *fp, FILE *fhp, const char *fname,
 			"\n");
 
 		fprintf(fp, "\tinitial\to_done = 1\'b0;\n");
-		fprintf(fp, "\t%s", always_reset.c_str());
+		fprintf(fp, "%s", always_reset.c_str());
 
 		if (with_reset)
 			fprintf(fp, "\t\to_done <= 1\'b0;\n"
 				"\telse\n");
 		fprintf(fp, "\t\to_done <= (state >= %d);\n\n", nstages-1);
 
+		if (with_aux)
+			fprintf(fp, "\tinitial\to_aux = 0;\n");
 		fprintf(fp, "\talways @(posedge i_clk)\n"
 			"\tif (state >= %d)\n"
 			"\tbegin\n"
@@ -338,12 +342,16 @@ void	seqcordic(FILE *fp, FILE *fhp, const char *fname,
 	} else {
 
 		fprintf(fp, "%s", always_reset.c_str());
-		if (with_reset)
+		if (with_reset) {
 			fprintf(fp,
 			"\tbegin\n"
 			"\t\to_xval <= 0;\n"
-			"\t\to_yval <= 0;\n"
+			"\t\to_yval <= 0;\n");
+			if (with_aux)
+				fprintf(fp, "\t\to_aux  <= 0;\n");
+			fprintf(fp,
 			"\tend else ");
+		}
 
 		fprintf(fp,
 			"if (i_ce)\n"

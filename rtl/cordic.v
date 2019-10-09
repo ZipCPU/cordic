@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This file is part of the CORDIC related project set.
 //
@@ -82,15 +82,21 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 	//
 	reg		[(NSTAGES):0]	ax;
 
+	initial	ax = 0;
 	always @(posedge i_clk)
 	if (i_reset)
-		ax <= {(NSTAGES+1){1'b0}};
+		ax <= 0;
 	else if (i_ce)
 		ax <= { ax[(NSTAGES-1):0], i_aux };
 
 	// First stage, get rid of all but 45 degrees
 	//	The resulting phase needs to be between -45 and 45
 	//		degrees but in units of normalized phase
+	initial begin
+		xv[0] = 0;
+		yv[0] = 0;
+		ph[0] = 0;
+	end
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
@@ -183,7 +189,12 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 		// Here's where we are going to put the actual CORDIC
 		// we've been studying and discussing.  Everything up to
 		// this point has simply been necessary preliminaries.
-	always @(posedge i_clk)
+		initial begin
+			xv[i+1] = 0;
+			yv[i+1] = 0;
+			ph[i+1] = 0;
+		end
+		always @(posedge i_clk)
 	if (i_reset)
 		begin
 			xv[i+1] <= 0;
@@ -226,11 +237,18 @@ module	cordic(i_clk, i_reset, i_ce, i_xval, i_yval, i_phase, i_aux,
 				yv[NSTAGES][(WW-OW)],
 				{(WW-OW-1){!yv[NSTAGES][WW-OW]}}});
 
+
+	initial begin
+		o_xval = 0;
+		o_yval = 0;
+		o_aux  = 0;
+	end
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
 		o_xval <= 0;
 		o_yval <= 0;
+		o_aux  <= 0;
 	end else if (i_ce)
 	begin
 		o_xval <= pre_xval[(WW-1):(WW-OW)];

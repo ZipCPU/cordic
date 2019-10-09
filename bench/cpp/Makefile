@@ -100,8 +100,12 @@ test:	cordic_tb topolar_tb
 	./cordic_tb
 	./topolar_tb
 	./quadtbl_tb
+	./seqcordic_tb
+	./seqpolar_tb
 
 clean:
-	rm -f cordic_tb     topolar_tb      quadtbl_tb
-	rm -f cordic_tb.vcd topolar_tb.vcd  quadtbl_tb.vcd
+	rm -f cordic_tb        topolar_tb      quadtbl_tb
+	rm -f cordic_tb.vcd    topolar_tb.vcd  quadtbl_tb.vcd
+	rm -f seqcordic_tb     seqpolar_tb
+	rm -f seqcordic_tb.vcd seqpolar_tb.vcd
 

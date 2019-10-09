@@ -14,7 +14,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This file is part of the CORDIC related project set.
 //
@@ -108,6 +108,10 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	//		actually requested phase, for later processing
 	//
 	//
+	initial	qv = 0;
+	initial	lv = 0;
+	initial	cv = 0;
+	initial	dx = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
@@ -172,12 +176,15 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	assign	w_qprod[(LBITS-1):(QBITS+1)] = { (3){qprod[(QBITS+DXBITS-1)]} };
 	assign	w_qprod[QBITS:0] // 10
 			= qprod[(QBITS+DXBITS-1):(DXBITS-1)]; // [21:12]
+	initial	lsum = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		lsum <= 0;
 	else if (i_ce)
 		lsum <= w_qprod + lv_1; // 14 bits
 
+	initial	cv_2 = 0;
+	initial	dx_2 = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
@@ -196,6 +203,7 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	//	2. Copy the constant coefficient value to the next clock
 	//
 	//
+	initial	lprod = 0;
 	always @(posedge i_clk)
 	if (i_ce)
 		lprod <= lsum * dx_2; // 27 bits
@@ -239,7 +247,7 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	// mark them all as unused for Verilator's linting purposes
 	//
 	// verilator lint_off UNUSED
-	wire	[(WW-1):0]	w_value;
+	reg	[(WW-1):0]	w_value;
 	always @(*)
 		if ((!r_value[WW-1])&&(&r_value[(WW-2):XTRA]))
 			w_value = r_value;

@@ -18,7 +18,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This file is part of the CORDIC related project set.
 //
@@ -86,6 +86,7 @@ module	seqcordic(i_clk, i_reset, i_stb, i_xval, i_yval, i_phase, i_aux,
 	//
 	reg		aux;
 
+	initial	aux = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		aux <= 0;
@@ -240,12 +241,13 @@ module	seqcordic(i_clk, i_reset, i_stb, i_xval, i_yval, i_phase, i_aux,
 				{(WW-OW-1){!yv[WW-OW]}}});
 
 	initial	o_done = 1'b0;
-		always @(posedge i_clk)
+	always @(posedge i_clk)
 	if (i_reset)
 		o_done <= 1'b0;
 	else
 		o_done <= (state >= 15);
 
+	initial	o_aux = 0;
 	always @(posedge i_clk)
 	if (state >= 15)
 	begin

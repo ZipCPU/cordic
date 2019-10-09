@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -149,13 +149,14 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 "\t// to this value, o_aux *must* contain the value that was in i_aux.\n"
 "\t//\n"
 "\treg\t\t[(NSTAGES):0]\tax;\n"
-"\n");
+"\n"
+"\tinitial\tax = 0;\n");
 
 		fprintf(fp, "%s", always_reset.c_str());
 
 		if (with_reset)
 			fprintf(fp,
-				"\t\tax <= {(NSTAGES+1){1'b0}};\n\telse ");
+				"\t\tax <= 0;\n\telse ");
 		fprintf(fp, "if (i_ce)\n"
 			"\t\tax <= { ax[(NSTAGES-1):0], i_aux };\n"
 			"\n");
@@ -165,6 +166,13 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		"\t// First stage, get rid of all but 45 degrees\n"
 		"\t//\tThe resulting phase needs to be between -45 and 45\n"
 		"\t//\t\tdegrees but in units of normalized phase\n");
+
+	fprintf(fp,
+		"\tinitial begin\n"
+		"\t\txv[0] = 0;\n"
+		"\t\tyv[0] = 0;\n"
+		"\t\tph[0] = 0;\n"
+		"\tend\n");
 
 	fprintf(fp, "%s", always_reset.c_str());
 
@@ -258,6 +266,14 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		"\t\t// Here\'s where we are going to put the actual CORDIC\n"
 		"\t\t// we\'ve been studying and discussing.  Everything up to\n"
 		"\t\t// this point has simply been necessary preliminaries.\n");
+	if (with_reset) {
+		fprintf(fp,
+			"\t\tinitial begin\n"
+			"\t\t\txv[i+1] = 0;\n"
+			"\t\t\tyv[i+1] = 0;\n"
+			"\t\t\tph[i+1] = 0;\n"
+			"\t\tend\n\t");
+	}
 	fprintf(fp, "%s", always_reset.c_str());
 	if (with_reset) {
 		fprintf(fp,
@@ -307,13 +323,20 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 			"\tassign\tpre_yval = yv[NSTAGES] + $signed({{(OW){1\'b0}},\n"
 				"\t\t\t\tyv[NSTAGES][(WW-OW)],\n"
 				"\t\t\t\t{(WW-OW-1){!yv[NSTAGES][WW-OW]}}});\n"
-			"\n");
+			"\n\n");
+
+		fprintf(fp, "\tinitial begin\n"
+			"\t\to_xval = 0;\n"
+			"\t\to_yval = 0;\n"
+			"\t\to_aux  = 0;\n"
+			"\tend\n");
 		fprintf(fp, "%s", always_reset.c_str());
 
 		if (with_reset)
 			fprintf(fp, "\tbegin\n"
 			"\t\to_xval <= 0;\n"
 			"\t\to_yval <= 0;\n"
+			"\t\to_aux  <= 0;\n"
 			"\tend else ");
 
 		fprintf(fp,
@@ -336,14 +359,24 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 			"\t// verilator lint_on UNUSED\n");
 	} else {
 
+		fprintf(fp, "\tinitial begin\n"
+			"\t\to_xval = 0;\n"
+			"\t\to_yval = 0;\n");
+		if (with_aux)
+			fprintf(fp, "\t\to_aux  = 0;\n");
+		fprintf(fp, "\tend\n");
 		fprintf(fp, "%s", always_reset.c_str());
 
-		if (with_reset)
+		if (with_reset) {
 			fprintf(fp,
 			"\tbegin\n"
 			"\t\to_xval <= 0;\n"
-			"\t\to_yval <= 0;\n"
+			"\t\to_yval <= 0;\n");
+			if (with_aux)
+				fprintf(fp, "\t\to_aux  <= 0;\n");
+			fprintf(fp,
 			"\tend else ");
+		}
 
 		fprintf(fp,
 			"if (i_ce)\n"

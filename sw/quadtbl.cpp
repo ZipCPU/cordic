@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -448,6 +448,12 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 	"\t//\n"
 	"\t//\n");
 
+	if (!NO_QUADRATIC_COMPONENT)
+		fprintf(fp, "\tinitial\tqv = 0;\n");
+	fprintf(fp,
+		"\tinitial\tlv = 0;\n"
+		"\tinitial\tcv = 0;\n"
+		"\tinitial\tdx = 0;\n");
 	fprintf(fp, "%s", always_reset.c_str());
 
 	if (with_reset) {
@@ -555,6 +561,7 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 			"\t\t\t= qprod[(QBITS+DXBITS-1):(DXBITS-1)]; // [%d:%d]\n",
 			qbits+1,qbits+dxbits-1, dxbits-1);
 
+		fprintf(fp, "\tinitial\tlsum = 0;\n");
 		fprintf(fp, "%s", always_reset.c_str());
 		if (with_reset)
 			fprintf(fp, "\t\tlsum <= 0;\n\telse ");
@@ -564,6 +571,9 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 				"\t\tlsum <= w_qprod + lv%s; // %d bits\n\n",
 				(NO_QUADRATIC_COMPONENT)?"":"_1", lbits+1);
 
+		fprintf(fp,
+			"\tinitial\tcv_2 = 0;\n"
+			"\tinitial\tdx_2 = 0;\n");
 		fprintf(fp, "%s", always_reset.c_str());
 		fprintf(fp,
 			"\tbegin\n"
@@ -591,6 +601,7 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 		(NO_QUADRATIC_COMPONENT) ? "only" : "second and final");
 
 	fprintf(fp,
+	"\tinitial\tlprod = 0;\n"
 	"\talways @(posedge i_clk)\n"
 	"\tif (i_ce)\n"
 			"\t\tlprod <= %s * dx%s; // %d bits\n\n",
@@ -669,7 +680,7 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 
 	fprintf(fp,
 	"\t// verilator lint_off UNUSED\n"
-	"\twire	[(WW-1):0]	w_value;\n"
+	"\treg	[(WW-1):0]	w_value;\n"
 	"\talways @(*)\n"
 	"\t\tif ((!r_value[WW-1])&&(&r_value[(WW-2):XTRA]))\n"
 	"\t\t\tw_value = r_value;\n"

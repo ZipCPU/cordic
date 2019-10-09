@@ -20,7 +20,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This file is part of the CORDIC related project set.
 //
@@ -88,6 +88,7 @@ module	seqpolar(i_clk, i_reset, i_stb, i_xval, i_yval, i_aux, o_busy,
 	//
 	reg		aux;
 
+	initial	aux = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		aux <= 0;
@@ -242,12 +243,13 @@ module	seqpolar(i_clk, i_reset, i_stb, i_xval, i_yval, i_aux, o_busy,
 				xv[(WW-OW)],
 				{(WW-OW-1){!xv[WW-OW]}}});
 
+	initial o_aux = 0;
 	always @(posedge i_clk)
 	if (last_state)
 	begin
 		o_mag   <= final_mag[(WW-1):(WW-OW)];
 		o_phase <= ph;
-		o_aux <= aux;
+		o_aux   <= aux;
 	end
 
 	assign	o_busy = !idle;

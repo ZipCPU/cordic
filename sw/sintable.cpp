@@ -14,7 +14,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -108,6 +108,8 @@ void	sintable(FILE *fp, const char *fname, int lgtable, int ow,
 		"\tinitial\t$readmemh(\"%s.hex\", tbl);\n"
 		"\n", name);
 
+	fprintf(fp,
+		"\tinitial\to_val = 0;\n");
 	fprintf(fp, "%s", always_reset.c_str());
 	if (with_reset) {
 		fprintf(fp, 
@@ -119,6 +121,7 @@ void	sintable(FILE *fp, const char *fname, int lgtable, int ow,
 		"\t\to_val <= tbl[i_phase];\n\n");
 
 	if (with_aux) {
+		fprintf(fp, "\tinitial\to_aux = 0;\n");
 		fprintf(fp, "%s", always_reset.c_str());
 		if (with_reset) {
 			fprintf(fp, 
@@ -203,7 +206,7 @@ void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 	if (with_aux)
 		fprintf(fp, "\t//\n"
 			"\tinput\twire\t\t\ti_aux;\n"
-			"\toutput\twire\t\t\to_aux;\n");
+			"\toutput\treg\t\t\to_aux;\n");
 
 	fprintf(fp,
 		"\n"
@@ -216,6 +219,11 @@ void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 		"\treg\t[(OW-1):0]\ttblvalue;\n"
 		"\n", name);
 
+	fprintf(fp,
+		"\tinitial\tnegate  = 2\'b00;\n"
+		"\tinitial\tindex   = 0;\n"
+		"\tinitial\ttblvalue= 0;\n"
+		"\tinitial\to_val   = 0;\n");
 	fprintf(fp, "%s", always_reset.c_str());
 
 	if (with_reset)
@@ -249,7 +257,8 @@ void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 		"\tend\n\n");
 
 	if (with_aux) {
-		fprintf(fp, "\treg [1:0]\taux;\n");
+		fprintf(fp, "\treg [1:0]\taux;\n\n"
+			"\tinitial\t{ o_aux, aux } = 0;\n");
 		fprintf(fp, "%s", always_reset.c_str());
 		if(with_reset)
 			fprintf(fp, "\t\t{ o_aux, aux } <= 0;\n"

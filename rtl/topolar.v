@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This file is part of the CORDIC related project set.
 //
@@ -82,12 +82,18 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 	//
 	reg		[(NSTAGES):0]	ax;
 
+	initial	ax = 0;
 	always @(posedge i_clk)
 	if (i_reset)
-		ax <= {(NSTAGES+1){1'b0}};
+		ax <= 0;
 	else if (i_ce)
 		ax <= { ax[(NSTAGES-1):0], i_aux };
 
+	initial begin
+		xv[0] = 0;
+		yv[0] = 0;
+		ph[0] = 0;
+	end
 	// First stage, map to within +/- 45 degrees
 	always @(posedge i_clk)
 	if (i_reset)
@@ -156,6 +162,11 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 
 	genvar	i;
 	generate for(i=0; i<NSTAGES; i=i+1) begin : TOPOLARloop
+		initial begin
+			xv[i+1] = 0;
+			yv[i+1] = 0;
+			ph[i+1] = 0;
+		end
 		always @(posedge i_clk)
 		// Here's where we are going to put the actual CORDIC
 		// rectangular to polar loop.  Everything up to this
@@ -198,12 +209,15 @@ module	topolar(i_clk, i_reset, i_ce, i_xval, i_yval, i_aux,
 				xv[NSTAGES][(WW-OW)],
 				{(WW-OW-1){!xv[NSTAGES][WW-OW]}}});
 
+	initial	o_mag   = 0;
+	initial	o_phase = 0;
+	initial	o_aux   = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
 		o_mag   <= 0;
 		o_phase <= 0;
-		o_aux <= 0;
+		o_aux   <= 0;
 	end else if (i_ce)
 	begin
 		o_mag   <= pre_mag[(WW-1):(WW-OW)];

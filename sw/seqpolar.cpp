@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2018, Gisselquist Technology, LLC
+// Copyright (C) 2018-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -159,7 +159,8 @@ void	seqpolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int o
 "\t// to this value, o_aux *must* contain the value that was in i_aux.\n"
 "\t//\n"
 "\treg\t\taux;\n"
-"\n");
+"\n"
+"\tinitial\taux = 0;\n");
 
 		fprintf(fp, "%s", always_reset.c_str());
 
@@ -297,12 +298,16 @@ void	seqpolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int o
 			"\n");
 
 
+		if (with_aux)
+			fprintf(fp, "\tinitial o_aux = 0;\n");
 		fprintf(fp, "\talways @(posedge i_clk)\n");
 		fprintf(fp,
 			"\tif (last_state)\n"
 			"\tbegin\n"
 			"\t\to_mag   <= final_mag[(WW-1):(WW-OW)];\n");
 	} else {
+		if (with_aux)
+			fprintf(fp, "\tinitial o_aux = 0;\n");
 		fprintf(fp, "\talways @(posedge i_clk)\n");
 		fprintf(fp,
 			"\tif (last_state)\n"
@@ -312,8 +317,7 @@ void	seqpolar(FILE *fp, FILE *fhp, const char *fname, int nstages, int iw, int o
 
 	fprintf(fp, "\t\to_phase <= ph;\n");
 	if (with_aux)
-		fprintf(fp,
-			"\t\to_aux <= aux;\n");
+		fprintf(fp, "\t\to_aux   <= aux;\n");
 	fprintf(fp, "\tend\n\n");
 
 	fprintf(fp, "\tassign\to_busy = !idle;\n\n");

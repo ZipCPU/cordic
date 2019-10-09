@@ -16,7 +16,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This file is part of the CORDIC related project set.
 //
@@ -49,7 +49,7 @@ module	quarterwav(i_clk, i_reset, i_ce, i_phase, i_aux, o_val, o_aux);
 	output	reg	[(OW-1):0]	o_val;
 	//
 	input	wire			i_aux;
-	output	wire			o_aux;
+	output	reg			o_aux;
 
 	reg	[(OW-1):0]		quartertable	[0:((1<<(PW-2))-1)];
 
@@ -59,6 +59,10 @@ module	quarterwav(i_clk, i_reset, i_ce, i_phase, i_aux, o_val, o_aux);
 	reg	[(PW-3):0]	index;
 	reg	[(OW-1):0]	tblvalue;
 
+	initial	negate  = 2'b00;
+	initial	index   = 0;
+	initial	tblvalue= 0;
+	initial	o_val   = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
@@ -85,6 +89,8 @@ module	quarterwav(i_clk, i_reset, i_ce, i_phase, i_aux, o_val, o_aux);
 	end
 
 	reg [1:0]	aux;
+
+	initial	{ o_aux, aux } = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		{ o_aux, aux } <= 0;

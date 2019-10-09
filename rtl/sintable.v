@@ -13,7 +13,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This file is part of the CORDIC related project set.
 //
@@ -54,12 +54,14 @@ module	sintable(i_clk, i_reset, i_ce, i_aux, i_phase, o_val, o_aux);
 
 	initial	$readmemh("sintable.hex", tbl);
 
+	initial	o_val = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		o_val <= 0;
 	else if (i_ce)
 		o_val <= tbl[i_phase];
 
+	initial	o_aux = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		o_aux <= 0;
