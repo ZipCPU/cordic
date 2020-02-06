@@ -25,7 +25,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2020, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published
@@ -60,6 +60,9 @@ rtl: sw
 
 bench: rtl
 	$(SUBMAKE) bench/cpp
+
+test: bench
+	$(SUBMAKE) bench/cpp test
 
 clean:
 	$(SUBMAKE) sw        clean
