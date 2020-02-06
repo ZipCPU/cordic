@@ -71,12 +71,12 @@ VSRC   := topolar.v cordic.v sintable.v quarterwav.v quadtbl.v	\
 	seqcordic.v seqpolar.v
 CFLAGS := -g -Og -Wall
 PROGRAMS:= gencordic
-CRDCARGS := -v -c
 all: $(PROGRAMS) $(VSRC)
 INCS :=
 PB   := 18	# Phase bits
 NB   := 13
 XTRA := 2
+CRDCARGS := -vca
 
 %.o: $(OBJDIR)/%.o
 $(OBJDIR)/%.o: %.cpp
@@ -113,8 +113,7 @@ cordic: basiccordic
 cordic.v: basiccordic
 $(VSRCD)/cordic.v: gencordic
 	$(mk-rtldir)
-	./gencordic -f $(VSRCD)/cordic.v  -v -i $(NB) -o $(NB) -t p2r -x 2 -c
-	# ./gencordic $(CRDCARGS) -f $(VSRCD)/cordic.v -i 24 -o 24 -t p2r -x 1
+	./gencordic $(CRDCARGS) -f $(VSRCD)/cordic.v  -v -i $(NB) -o $(NB) -t p2r -x 2 -c
 
 .PHONY: seqcordic cordic.v cordic
 seqcordic: $(VSRCD)/seqcordic.v
@@ -122,7 +121,7 @@ scordic: seqcordic
 seqcordic.v: seqcordic
 $(VSRCD)/seqcordic.v: gencordic
 	$(mk-rtldir)
-	./gencordic -f $(VSRCD)/seqcordic.v  -v -i $(NB) -o $(NB) -t sp2r -x $(XTRA) -c
+	./gencordic $(CRDCARGS) -f $(VSRCD)/seqcordic.v  -v -i $(NB) -o $(NB) -t sp2r -x $(XTRA) -c
 
 .PHONY: sintable sintable.v
 sintable: $(VSRCD)/sintable.v

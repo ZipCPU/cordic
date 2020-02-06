@@ -56,12 +56,13 @@
 void	usage(void) {
 	fprintf(stderr,
 "USAGE: gencordic [-ahrv] [-f <fname>] [-i <iw>] [-o <ow>]\n"
-"\t\t[-n <stages>] [-p <phasebits>] [-t <type-of-cordic>] [-x <xtrabits>]\n"
+"\t   [-n <stages>] [-p <phasebits>] [-t <type-of-cordic>] [-x <xtrabits>]\n"
 "\n"
-"\t-a\t\tCreate an auxilliary bit, useful for tracking logic through\n"
-"\t\t\tthe cordic stages, and knowing when a valid output is ready.\n"
-"\t-c\t\tCreate\'s a C-header file containing the numbers of bits the\n"
-"\t\t\tcordic has been built for.\n"
+"\t-a\t\tCreate an auxilliary bit, useful for tracking logic\n"
+"\t\t\tthrough the cordic stages, and knowing when a valid\n"
+"\t\t\toutput is ready.\n"
+"\t-c\t\tCreate\'s a C-header file containing the numbers of bits\n"
+"\t\t\tthe cordic has been built for.\n"
 "\t-f <fname>\tSets the output filename to <fname>\n"
 "\t-h\t\tShow this message\n"
 "\t-i <iw>\tSets the input bit-width\n"
@@ -70,12 +71,17 @@ void	usage(void) {
 "\t-p <pw>\tSets the number of bits in the phase processor\n"
 "\t-r\tCreate reset logic in the produced cordic\n"
 "\t-t <type-of-cordic>\tDetermines which type of logic is created.  Two\n"
-"\t\t\ttypes of cordic\'s are supported:\n"
-"\t\tp2r\tPolar to rectangular.  Given a cmoplex vector, rotate it by\n"
-"\t\t\tthe given number of degrees.  This is what I commonly think of\n"
-"\t\t\twhen I think of a cordic.  You can use this to create sin/cos\n"
-"\t\t\tfunctions, or even to multiply by a complex conjugate.\n"
+"\t\t\tbase types of cordic\'s are supported, and three methods\n"
+"\t\t\tof straight sinewave generation:\n"
+"\t\tp2r\tPolar to rectangular.  Given a complex vector, rotate it\n"
+"\t\t\tby the given number of degrees.  This is what I commonly\n"
+"\t\t\tthink of when I think of a cordic.  You can use this to\n"
+"\t\t\tcreate sin/cos functions, or even to multiply by a\n"
+"\t\t\tcomplex conjugate.\n"
 "\t\tr2p\tRectangular to polar coordinate conversion\n"
+"\t\tsp2r\tPolar to rectangular, but sequential instead of\n"
+"\t\t\tpipelined\n"
+"\t\tsr2p\tSequential rectangular to polar\n"
 "\t\tqtr\tQuarter-wave table lookup sinewave generator\n"
 "\t\tqtbl\tQuadratically interpolated sinewave generator\n"
 "\t\ttbl\tStraight table lookup sinewave generator\n"
@@ -88,13 +94,21 @@ int	main(int argc, char **argv) {
 	const int	DEFAULT_BITWIDTH = 24;
 	int	nstages = -1, iw=-1, ow=-1, nxtra=2, phase_bits=-1, ww;
 	const char	*fname = NULL;
-	bool	with_reset = true, with_aux = true;
+	bool	with_reset = true, with_aux = false;
 	bool	polar_to_rect = false, rect_to_polar = true, verbose=false,
 		gen_sintable = false, gen_quarterwav = false, c_header = false,
 		gen_quadtbl = false, async_reset = false,
 		sequential = false;
 	int	c;
 	FILE	*fp, *fhp;
+
+	if (argc <= 1) {
+		// With no arguments, assume the user just wants to know what
+		// this program is and does, so give them a message indicating
+		// the proper usage.
+		usage();
+		exit(EXIT_SUCCESS);
+	}
 
 	while((c = getopt(argc, argv, "aAcf:hi:n:o:p:Rrt:vx:"))!=-1) {
 		switch(c) {
@@ -210,21 +224,22 @@ int	main(int argc, char **argv) {
 	}
 
 	if (polar_to_rect) {
-		if ((iw < 0)&&(ow > 0))
+		if ((iw <= 0)&&(ow > 0))
 			iw = ow;
-		if (ow < 0)
+		if (ow <= 0)
 			ow = iw;
-		if ((iw < 0)||(ow < 0)) {
+		if ((iw <= 0)||(ow <= 0)) {
 			fprintf(stderr, "WARNING: Assuming an input and output bit-width of %d bits\n", DEFAULT_BITWIDTH);
 			iw = DEFAULT_BITWIDTH;
 			ow = DEFAULT_BITWIDTH;
 		}
+
 		ww = (ow > iw) ? ow:iw;
 		nxtra += 1;
 		ww += nxtra;
-		if (phase_bits < 0)
+		if (phase_bits <= 0)
 			phase_bits = calc_phase_bits(ww);
-		if (nstages < 0)
+		if (nstages <= 0)
 			nstages = calc_stages(ww, phase_bits);
 
 		if (verbose) {
@@ -247,28 +262,28 @@ int	main(int argc, char **argv) {
 		}
 
 		if (sequential)
-			seqcordic(fp, fhp, fname,
+			seqcordic(fp, fhp, (fname) ? fname : "seqcordic.v",
 				nstages, iw, ow, nxtra, phase_bits,
 				with_reset, with_aux, async_reset);
 		else
-			basiccordic(fp, fhp, fname,
+			basiccordic(fp, fhp, (fname) ? fname : "cordic.v",
 				nstages, iw, ow, nxtra, phase_bits,
 				with_reset, with_aux, async_reset);
 	} if (rect_to_polar) {
-		if ((iw < 0)&&(ow > 0))
+		if ((iw <= 0)&&(ow > 0))
 			iw = ow;
-		if (ow < 0)
+		if (ow <= 0)
 			ow = iw;
-		if ((iw < 0)||(ow < 0)) {
+		if ((iw <= 0)||(ow <= 0)) {
 			fprintf(stderr, "WARNING: Assuming an input and output bit-width of %d bits\n", DEFAULT_BITWIDTH);
 			iw = DEFAULT_BITWIDTH;
 			ow = DEFAULT_BITWIDTH;
 		} ww = (ow > iw) ? ow:iw;
 		nxtra += 2;
 		ww += nxtra;
-		if (phase_bits < 0)
+		if (phase_bits <= 0)
 			phase_bits = calc_phase_bits(ww);
-		if (nstages < 0)
+		if (nstages <= 0)
 			nstages = calc_stages(phase_bits);
 		if (verbose) {
 			printf("Building a rectangular-to-polar CORDIC converter with the\nfollowing parameters:\n"
@@ -287,21 +302,21 @@ int	main(int argc, char **argv) {
 		}
 
 		if (sequential)
-			seqpolar(fp, fhp, fname,
+			seqpolar(fp, fhp, (fname) ? fname : "seqtopolar.v",
 				nstages, iw, ow, nxtra, phase_bits,
 				with_reset, with_aux, async_reset);
 		else
-			topolar(fp, fhp, fname,
+			topolar(fp, fhp, (fname) ? fname : "topolar.v",
 				nstages, iw, ow, nxtra, phase_bits,
 				with_reset, with_aux, async_reset);
 	} if (gen_sintable) {
-		if ((iw >= 0)&&(phase_bits < 0)) {
+		if ((iw >= 0)&&(phase_bits <= 0)) {
 			phase_bits = iw;
 			iw = -1;
 		}
 		if (iw >= 0)
 			fprintf(stderr, "WARNING: Input width parameter, -i %d, ignored for sine table generation\n", iw);
-		if ((phase_bits > 3)&&(ow < 0)) {
+		if ((phase_bits > 3)&&(ow <= 0)) {
 			for(int k=phase_bits-2; k<phase_bits + 3; k++) {
 				int	pb;
 				pb = calc_phase_bits(k);
@@ -310,10 +325,10 @@ int	main(int argc, char **argv) {
 					break;
 				}
 			}
-		} if (ow < 0) {
+		} if (ow <= 0) {
 			fprintf(stderr, "WARNING: Assuming an output bit-width of %d bits\n", DEFAULT_BITWIDTH);
 			ow = DEFAULT_BITWIDTH;
-		} if (phase_bits < 0)
+		} if (phase_bits <= 0)
 			phase_bits = calc_phase_bits(ow);
 		if (verbose) {
 			printf("Building a Sinewave table lookup with the following parameters:\n"
@@ -331,7 +346,8 @@ int	main(int argc, char **argv) {
 				printf("\tAux bits will be added to the design\n");
 		}
 
-		sintable(fp, fname, phase_bits, ow, with_reset, with_aux, async_reset);
+		sintable(fp, (fname) ? fname : "sintable.v",
+			phase_bits, ow, with_reset, with_aux, async_reset);
 	} if (gen_quarterwav) {
 		if ((iw >= 0)&&(phase_bits < 0)) {
 			phase_bits = iw;
@@ -339,7 +355,7 @@ int	main(int argc, char **argv) {
 		}
 		if (iw >= 0)
 			fprintf(stderr, "WARNING: Input width parameter, -i %d, ignored for sine table generation\n", iw);
-		if ((phase_bits > 3)&&(ow < 0)) {
+		if ((phase_bits > 3)&&(ow <= 0)) {
 			for(int k=phase_bits-2; k<phase_bits + 3; k++) {
 				int	pb;
 				pb = calc_phase_bits(k);
@@ -348,10 +364,10 @@ int	main(int argc, char **argv) {
 					break;
 				}
 			}
-		} if (ow < 0) {
+		} if (ow <= 0) {
 			fprintf(stderr, "WARNING: Assuming an output bit-width of %d bits\n", DEFAULT_BITWIDTH);
 			ow = DEFAULT_BITWIDTH;
-		} if (phase_bits < 0)
+		} if (phase_bits <= 0)
 			phase_bits = calc_phase_bits(ow);
 		if (verbose) {
 			printf("Building a Sinewave table lookup with the following parameters:\n"
@@ -369,13 +385,14 @@ int	main(int argc, char **argv) {
 				printf("\tAux bits will be added to the design\n");
 		}
 
-		quarterwav(fp, fname, phase_bits, ow, with_reset, with_aux, async_reset);
+		quarterwav(fp, (fname) ? fname : "quarterwav.v",
+			phase_bits, ow, with_reset, with_aux, async_reset);
 	} if (gen_quadtbl) {
-		if ((iw < 0)&&(ow > 0))
+		if ((iw <= 0)&&(ow > 0))
 			iw = ow;
-		if (ow < 0)
+		if (ow <= 0)
 			ow = iw;
-		if ((iw < 0)||(ow < 0)) {
+		if ((iw <= 0)||(ow <= 0)) {
 			fprintf(stderr, "WARNING: Assuming an input and output bit-width of %d bits\n", DEFAULT_BITWIDTH);
 			iw = DEFAULT_BITWIDTH;
 			ow = DEFAULT_BITWIDTH;
@@ -383,9 +400,9 @@ int	main(int argc, char **argv) {
 		ww = (ow > iw) ? ow:iw;
 		nxtra += 1;
 		ww += nxtra;
-		if (phase_bits < 0)
+		if (phase_bits <= 0)
 			phase_bits = calc_phase_bits(ww);
-		if (nstages < 0)
+		if (nstages <= 0)
 			nstages = calc_stages(ww, phase_bits);
 
 		if (verbose) {
@@ -406,11 +423,7 @@ int	main(int argc, char **argv) {
 				printf("\tAux bits will be added to the design\n");
 		}
 
-		/*
-		basiccordic(fp, fhp, fname,
-			nstages, iw, ow, nxtra, phase_bits,
-			with_reset, with_aux);
-		*/
-		quadtbl(fp, fhp, fname, phase_bits, ow, nxtra, with_reset, with_aux, async_reset);
+		quadtbl(fp, fhp, (fname) ? fname : "quadtbl.v", phase_bits,
+			ow, nxtra, with_reset, with_aux, async_reset);
 	}
 }
