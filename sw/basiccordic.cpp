@@ -327,17 +327,20 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 
 		fprintf(fp, "\tinitial begin\n"
 			"\t\to_xval = 0;\n"
-			"\t\to_yval = 0;\n"
-			"\t\to_aux  = 0;\n"
-			"\tend\n");
+			"\t\to_yval = 0;\n");
+		if (with_aux)
+			fprintf(fp, "\t\to_aux  = 0;\n");
+		fprintf(fp, "\tend\n");
 		fprintf(fp, "%s", always_reset.c_str());
 
-		if (with_reset)
+		if (with_reset) {
 			fprintf(fp, "\tbegin\n"
-			"\t\to_xval <= 0;\n"
-			"\t\to_yval <= 0;\n"
-			"\t\to_aux  <= 0;\n"
-			"\tend else ");
+				"\t\to_xval <= 0;\n"
+				"\t\to_yval <= 0;\n");
+			if (with_aux)
+				fprintf(fp, "\t\to_aux  <= 0;\n");
+			fprintf(fp, "\tend else ");
+		}
 
 		fprintf(fp,
 			"if (i_ce)\n"
