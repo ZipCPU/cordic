@@ -1,20 +1,25 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	quadtbl.h
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	This .h file notes the default parameter values from
 //		within the generated file.  It is used to communicate
 //	information about the design to the bench testing code.
 //
+// This core was generated via a core generator using the following command
+// line:
+//
+//  % (Not given)
+//
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This file is part of the CORDIC related project set.
 //
 // The CORDIC related project set is free software (firmware): you can
@@ -35,7 +40,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #ifndef	QUADTBL_H
 #define	QUADTBL_H
 const	int	OW         = 13; // bits

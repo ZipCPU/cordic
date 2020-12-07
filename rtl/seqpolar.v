@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	../rtl/seqpolar.v
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	This is a rectangular to polar conversion routine based upon an
@@ -15,13 +15,18 @@
 //	sequential, not parallel at all.
 //
 //
+// This core was generated via a core generator using the following command
+// line:
+//
+//  % ./gencordic -vca -f ../rtl/seqpolar.v -i 13 -o 13 -t sr2p -x 2
+//
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This file is part of the CORDIC related project set.
 //
 // The CORDIC related project set is free software (firmware): you can
@@ -42,26 +47,33 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 `default_nettype	none
 //
-module	seqpolar(i_clk, i_reset, i_stb, i_xval, i_yval, i_aux, o_busy,
-		o_done, o_mag, o_phase, o_aux);
-	localparam	IW=13,	// The number of bits in our inputs
-			OW=13,// The number of output bits to produce
-			NSTAGES=18,
-			XTRA= 4,// Extra bits for internal precision
-			WW=21,	// Our working bit-width
-			PW=21;	// Bits in our phase variables
-	input					i_clk, i_reset, i_stb;
-	input	wire	signed	[(IW-1):0]	i_xval, i_yval;
-	output	wire				o_busy;
-	output	reg				o_done;
-	output	reg	signed	[(OW-1):0]	o_mag;
-	output	reg		[(PW-1):0]	o_phase;
-	input	wire				i_aux;
-	output	reg				o_aux;
+module	seqpolar #(
+		// {{{
+		localparam	IW=13,	// The number of bits in our inputs
+				OW=13,// The number of output bits to produce
+				NSTAGES=18,
+				XTRA= 4,// Extra bits for internal precision
+				WW=21,	// Our working bit-width
+				PW=21	// Bits in our phase variables
+		// }}}
+	) (
+		// {{{
+		input	wire				i_clk, i_reset, i_stb,
+		input	wire	signed	[(IW-1):0]	i_xval, i_yval,
+		input	wire				i_aux,
+		output	wire				o_busy,
+		output	reg				o_done,
+		output	reg	signed	[(OW-1):0]	o_mag,
+		output	reg		[(PW-1):0]	o_phase,
+		output	reg				o_aux
+		// }}}
+	);
+
 	// First step: expand our input to our working width.
+	// {{{
 	// This is going to involve extending our input by one
 	// (or more) bits in addition to adding any xtra bits on
 	// bits on the right.  The one bit extra on the left is to
@@ -72,13 +84,22 @@ module	seqpolar(i_clk, i_reset, i_stb, i_xval, i_yval, i_aux, o_busy,
 	assign	e_xval = { {(2){i_xval[(IW-1)]}}, i_xval, {(WW-IW-2){1'b0}} };
 	assign	e_yval = { {(2){i_yval[(IW-1)]}}, i_yval, {(WW-IW-2){1'b0}} };
 
+	// }}}
 	// Declare variables for all of the separate stages
+	// {{{
 	reg	signed	[(WW-1):0]	xv, yv, prex, prey;
 	reg		[(PW-1):0]	ph, preph;
 
+	reg		aux;
+	reg		idle, pre_valid;
+	reg	[4:0]	state;
+
+	wire		last_state;
+	// }}}
+
 	//
 	// Handle the auxilliary logic.
-	//
+	// {{{
 	// The auxilliary bit is designed so that you can place a valid bit into
 	// the CORDIC function, and see when it comes out.  While the bit is
 	// allowed to be anything, the requirement of this bit is that it *must*
@@ -86,41 +107,52 @@ module	seqpolar(i_clk, i_reset, i_stb, i_xval, i_yval, i_aux, o_busy,
 	// are input together with i_aux, then when o_xval and o_yval are set
 	// to this value, o_aux *must* contain the value that was in i_aux.
 	//
-	reg		aux;
-
 	initial	aux = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		aux <= 0;
 	else if ((i_stb)&&(!o_busy))
 		aux <= i_aux;
+	// }}}
 
 	// First stage, map to within +/- 45 degrees
+	// {{{
 	always @(posedge i_clk)
-		case({i_xval[IW-1], i_yval[IW-1]})
-		2'b01: begin // Rotate by -315 degrees
-			prex <=  e_xval - e_yval;
-			prey <=  e_xval + e_yval;
-			preph <= 21'h1c0000;
-			end
-		2'b10: begin // Rotate by -135 degrees
-			prex <= -e_xval + e_yval;
-			prey <= -e_xval - e_yval;
-			preph <= 21'hc0000;
-			end
-		2'b11: begin // Rotate by -225 degrees
-			prex <= -e_xval - e_yval;
-			prey <=  e_xval - e_yval;
-			preph <= 21'h140000;
-			end
-		// 2'b00:
-		default: begin // Rotate by -45 degrees
-			prex <=  e_xval + e_yval;
-			prey <= -e_xval + e_yval;
-			preph <= 21'h40000;
-			end
-		endcase
-	//
+	case({i_xval[IW-1], i_yval[IW-1]})
+	2'b01: begin // Rotate by -315 degrees
+		// {{{
+		prex <=  e_xval - e_yval;
+		prey <=  e_xval + e_yval;
+		preph <= 21'h1c0000;
+		end
+		// }}}
+	2'b10: begin // Rotate by -135 degrees
+		// {{{
+		prex <= -e_xval + e_yval;
+		prey <= -e_xval - e_yval;
+		preph <= 21'hc0000;
+		end
+		// }}}
+	2'b11: begin // Rotate by -225 degrees
+		// {{{
+		prex <= -e_xval - e_yval;
+		prey <=  e_xval - e_yval;
+		preph <= 21'h140000;
+		end
+		// }}}
+	// 2'b00:
+	default: begin // Rotate by -45 degrees
+		// {{{
+		prex <=  e_xval + e_yval;
+		prey <= -e_xval + e_yval;
+		preph <= 21'h40000;
+		end
+		// }}}
+	endcase
+	// }}}
+
+	// Cordic angle table
+	// {{{
 	// In many ways, the key to this whole algorithm lies in the angles
 	// necessary to do this.  These angles are also our basic reason for
 	// building this CORDIC in C++: Verilog just can't parameterize this
@@ -164,18 +196,19 @@ module	seqpolar(i_clk, i_reset, i_stb, i_xval, i_yval, i_aux, o_busy,
 	initial	cordic_angle[29] = 21'h00_0000; //   0.000000 deg
 	initial	cordic_angle[30] = 21'h00_0000; //   0.000000 deg
 	initial	cordic_angle[31] = 21'h00_0000; //   0.000000 deg
+	// {{{
 	// Std-Dev    : 0.00 (Units)
 	// Phase Quantization: 0.000008 (Radians)
 	// Gain is 1.164435
 	// You can annihilate this gain by multiplying by 32'hdbd95b16
 	// and right shifting by 32 bits.
+	// }}}
+	// }}}
 
-	reg		idle, pre_valid;
-	reg	[4:0]	state;
-
-	wire	last_state;
 	assign	last_state = (state >= 19);
 
+	// idle
+	// {{{
 	initial	idle = 1'b1;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -184,14 +217,19 @@ module	seqpolar(i_clk, i_reset, i_stb, i_xval, i_yval, i_aux, o_busy,
 		idle <= 1'b0;
 	else if (last_state)
 		idle <= 1'b1;
-
+	// }}}
+	// pre_valid
+	// {{{
 	initial	pre_valid = 1'b0;
 	always @(posedge i_clk)
 	if (i_reset)
 		pre_valid <= 1'b0;
 	else
 		pre_valid <= (i_stb)&&(idle);
+	// }}}
 
+	// state
+	// {{{
 	initial	state = 0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -202,47 +240,64 @@ module	seqpolar(i_clk, i_reset, i_stb, i_xval, i_yval, i_aux, o_busy,
 		state <= 0;
 	else
 		state <= state + 1;
-
+	// }}}
+	// cangle -- table lookup
+	// {{{
 	always @(posedge i_clk)
 		cangle <= cordic_angle[state[4:0]];
-
+	// }}}
+	// Actual CORDIC rotation
+	// {{{
 	// Here's where we are going to put the actual CORDIC
 	// rectangular to polar loop.  Everything up to this
 	// point has simply been necessary preliminaries.
 	always @(posedge i_clk)
 	if (pre_valid)
 	begin
+		// {{{
 		xv <= prex;
 		yv <= prey;
 		ph <= preph;
+		// }}}
 	end else if (yv[(WW-1)]) // Below the axis
 	begin
+		// {{{
 		// If the vector is below the x-axis, rotate by
 		// the CORDIC angle in a positive direction.
 		xv <= xv - (yv>>>state);
 		yv <= yv + (xv>>>state);
 		ph <= ph - cangle;
+		// }}}
 	end else begin
+		// {{{
 		// On the other hand, if the vector is above the
 		// x-axis, then rotate in the other direction
 		xv <= xv + (yv>>>state);
 		yv <= yv - (xv>>>state);
 		ph <= ph + cangle;
+		// }}}
 	end
+	// }}}
 
+	// o_done
+	// {{{
 	always @(posedge i_clk)
 	if (i_reset)
 		o_done <= 1'b0;
 	else
 		o_done <= (last_state);
-
+	// }}}
 	// Round our magnitude towards even
+	// {{{
 	wire	[(WW-1):0]	final_mag;
 
 	assign	final_mag = xv + $signed({{(OW){1'b0}},
 				xv[(WW-OW)],
-				{(WW-OW-1){!xv[WW-OW]}}});
+				{(WW-OW-1){!xv[WW-OW]}} });
+	// }}}
 
+	// Output assignments: o_mag, o_phase, and o_aux
+	// {{{
 	initial o_aux = 0;
 	always @(posedge i_clk)
 	if (last_state)
@@ -251,12 +306,15 @@ module	seqpolar(i_clk, i_reset, i_stb, i_xval, i_yval, i_aux, o_busy,
 		o_phase <= ph;
 		o_aux   <= aux;
 	end
-
+	// }}}
 	assign	o_busy = !idle;
 
 	// Make Verilator happy with pre_.val
+	// {{{
 	// verilator lint_off UNUSED
-	wire	[(WW-OW):0] unused_val;
-	assign	unused_val = { final_mag[WW-1], final_mag[(WW-OW-1):0] };
+	wire	 unused_val;
+	assign	unused_val = &{ 1'b0,  final_mag[WW-1],
+			final_mag[(WW-OW-1):0] };
 	// verilator lint_on UNUSED
+	// }}}
 endmodule

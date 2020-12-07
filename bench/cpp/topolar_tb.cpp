@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename:	topolar_tb.cpp
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	A quick test bench to determine if the rectangular to polar
@@ -11,9 +11,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -28,14 +28,15 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 
 #include <verilated.h>
@@ -51,11 +52,14 @@
 #endif
 #include "testb.h"
 
+// TOPOLAR_TB
+// {{{
 class	TOPOLAR_TB : public TESTB<BASECLASS> {
 	bool		m_debug;
 public:
 
 	TOPOLAR_TB(void) {
+		// {{{
 		m_debug = true;
 #ifdef	WITH_RESET
 #ifdef	ASYNC_RESET
@@ -73,13 +77,17 @@ public:
 		m_core->i_yval  = 0;
 		m_core->i_aux   = 0;
 		tick();
+		// }}}
 	}
 };
+// }}}
 
 const int	LGNSAMPLES=PW;
 const int	NSAMPLES=(1<<LGNSAMPLES);
 
 int main(int  argc, char **argv) {
+	// Declare necessary variables
+	// {{{
 	Verilated::commandArgs(argc, argv);
 	TOPOLAR_TB	*tb = new TOPOLAR_TB;
 	int	*ipdata, *ixval,  *iyval,
@@ -97,19 +105,28 @@ int main(int  argc, char **argv) {
 	omag   = new int[NSAMPLES];
 	ophase = new int[NSAMPLES];
 	dpdata = new double[NSAMPLES];
+	// }}}
+
+	// Open a trace
+	// {{{
 
 #ifdef	CLOCKS_PER_OUTPUT
 	tb->opentrace("seqpolar_tb.vcd");
 #else
 	tb->opentrace("topolar_tb.vcd");
 #endif
+	// }}}
 
 	tb->reset();
 
+	// Run the simulation
+	// {{{
 	shift  = (8*sizeof(long)-OW);
 	pshift = (8*sizeof(long)-PW);
 	idx = 0;
 	for(int i=0; i<NSAMPLES; i++) {
+		// Feed the core with a number of test samples
+		// {{{
 		double	ph, cs, sn, mg;
 		long	lv;
 
@@ -130,6 +147,8 @@ int main(int  argc, char **argv) {
 		tb->m_core->i_aux   = 1;
 
 #ifdef	CLOCKS_PER_OUTPUT
+		// Wait for the result to be ready
+		// {{{
 		tb->m_core->i_stb = 1;
 		for(int j=0; j<CLOCKS_PER_OUTPUT-1; j++) {
 			tb->tick();
@@ -142,11 +161,14 @@ int main(int  argc, char **argv) {
 		assert(!tb->m_core->o_busy);
 		assert(tb->m_core->o_done);
 		assert(tb->m_core->o_aux);
+		// }}}
 #else
+		// One data input per clock
 		tb->tick();
 #endif
 
 		if (tb->m_core->o_aux) {
+			// {{{
 			long	lv;
 			lv = (long)tb->m_core->o_mag;
 			lv <<= shift;
@@ -161,10 +183,13 @@ int main(int  argc, char **argv) {
 			//	ixval[idx], iyval[idx],
 			//	omag[idx], ophase[idx]);
 			idx++;
+			// }}}
 		}
+		// }}}
 	}
 
 #ifndef	CLOCKS_PER_OUTPUT
+	// {{{
 	tb->m_core->i_aux = 0;
 	while(tb->m_core->o_aux) {
 		tb->m_core->i_aux   = 0;
@@ -187,8 +212,12 @@ int main(int  argc, char **argv) {
 			idx++;
 		}
 	}
+	// }}}
 #endif
+	// }}}
 
+	// Get some statistics on the results
+	// {{{
 	double	mxperr = 0.0, mxverr = 0.0;
 	for(int i=0; i<NSAMPLES; i++) {
 		double	mgerr, epdata, dperr, emag;
@@ -206,13 +235,14 @@ int main(int  argc, char **argv) {
 		sum_perr += dperr * dperr;
 
 		emag = imag[i] * GAIN;// * sqrt(2);
-		if (IW+1 > OW)
-			emag = emag / pow(2.,(IW-1-OW))/4/sqrt(2);
-		else if (OW > IW+1)
-			emag = emag * pow(2.,(IW-1-OW));
+		// if (IW+1 > OW)
+		//	emag = emag / pow(2.,(IW-1-OW));
+		// else if (OW > IW+1)
+		//	emag = emag * pow(2.,(IW-1-OW));
+		emag = imag[i] * pow(2.,(IW-1-OW));
 
 		// omag should equal imag * GAIN
-		mgerr = fabs(omag[i] - emag);
+		mgerr = fabs(omag[i] - emag * GAIN);
 		if (mgerr > mxverr)
 			mxverr = mgerr;
 
@@ -224,8 +254,11 @@ int main(int  argc, char **argv) {
 		//	emag, epdata,
 		//	mgerr, dperr);
 	}
+	// }}}
 
 	if(false) {
+		// Generate an Octave-readable file for debugging (if necessary)
+		// {{{
 		FILE	*dbgfp;
 		dbgfp = fopen("topolar.32t", "w");
 		assert(dbgfp);
@@ -249,6 +282,7 @@ int main(int  argc, char **argv) {
 		}
 
 		fclose(dbgfp);
+		// }}}
 	}
 
 	sum_perr /= NSAMPLES;
@@ -283,7 +317,7 @@ int main(int  argc, char **argv) {
 	printf("Max phase     error: %.2f (%.6f Rel)\n", mxperr,
 		mxperr / (2.0 * (1<<(PW-1))));
 	printf("Max magnitude error: %9.6f, expect %.2f\n", mxverr,
-		sqrt(QUANTIZATION_VARIANCE));
+		2.0 * sqrt(QUANTIZATION_VARIANCE));
 	printf("Avg phase err:       %9.6f, expect %.2f\n", sqrt(sum_perr),
 		sqrt(PHASE_VARIANCE_RAD) * RAD_TO_PHASE);
 

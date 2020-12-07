@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	sintable.cpp
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	To define two different table-based sinewave calculators that
@@ -13,9 +13,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -30,14 +30,15 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,8 +49,10 @@
 
 #include "legal.h"
 
-void	sintable(FILE *fp, const char *fname, int lgtable, int ow,
+void	sintable(FILE *fp, const char *cmdline, const char *fname,
+		int lgtable, int ow,
 		bool with_reset, bool with_aux, bool async_reset) {
+	// {{{
 	char	*name;
 	const	char	PURPOSE[] =
 	"This is a very simple sinewave table lookup approach\n"
@@ -82,54 +85,71 @@ void	sintable(FILE *fp, const char *fname, int lgtable, int ow,
 		always_reset = "\talways @(posedge i_clk)\n\t";
 
 	fprintf(fp,
-		"module	%s(i_clk, %si_ce, %si_phase, o_val%s);\n"
-		"\t//\n"
+		"module	%s #(\n"
+		"\t\t// {{{\n"
 		"\tparameter\tPW =%2d, // Number of bits in the input phase\n"
-		"\t\t\tOW =%2d; // Number of output bits\n"
-		"\t//\n"
-		"\tinput\twire\t\t\ti_clk, %si_ce;\n"
-		"\tinput\twire\t[(PW-1):0]\ti_phase;\n"
-		"\toutput\treg\t[(OW-1):0]\to_val;\n",
+		"\t\t\tOW =%2d // Number of output bits\n"
+		"\t\t// }}}\n"
+		"\t) (\n"
+		"\t\t// {{{\n"
+		"\tinput\twire\t\t\ti_clk, %si_ce,\n"
+		"\tinput\twire\t[(PW-1):0]\ti_phase,\n"
+		"\toutput\treg\t[(OW-1):0]\to_val%s\n",
 		name,
-		resetw.c_str(),
-		(with_aux)   ? "i_aux, "  :"",
-		(with_aux)   ? ", o_aux"  :"",
+		// resetw.c_str(),
+		// (with_aux)   ? "i_aux, "  :"",
+		// (with_aux)   ? ", o_aux"  :"",
 		lgtable, ow,
-		resetw.c_str());
+		resetw.c_str(), (with_aux) ? ",":"");
 	if (with_aux)
 		fprintf(fp,
 			"\t//\n"
-			"\tinput\twire\t\t\ti_aux;\n"
-			"\toutput\treg\t\t\to_aux;\n");
+			"\tinput\twire\t\t\ti_aux,\n"
+			"\toutput\treg\t\t\to_aux\n");
+	fprintf(fp, "\t\t// }}}\n"
+		"\t);\n\n");
+
 	fprintf(fp,
-		"\n"
+		"\t// Declare variables\n"
+		"\t// {{{\n"
 		"\treg\t[(OW-1):0]\t\ttbl\t[0:((1<<PW)-1)];\n"
-		"\n"
+		"\t// }}}\n"
 		"\tinitial\t$readmemh(\"%s.hex\", tbl);\n"
 		"\n", name);
 
+	// o_val
+	// {{{
 	fprintf(fp,
+		"\t// o_val\n"
+		"\t// {{{\n"
 		"\tinitial\to_val = 0;\n");
 	fprintf(fp, "%s", always_reset.c_str());
 	if (with_reset) {
-		fprintf(fp, 
+		fprintf(fp,
 			"\t\to_val <= 0;\n"
 			"\telse ");
 	}
 
 	fprintf(fp, "if (i_ce)\n"
-		"\t\to_val <= tbl[i_phase];\n\n");
+		"\t\to_val <= tbl[i_phase];\n\t// }}}\n\n");
+	// }}}
 
 	if (with_aux) {
-		fprintf(fp, "\tinitial\to_aux = 0;\n");
+		// o_aux
+		// {{{
+		fprintf(fp,
+			"\t// o_aux\n"
+			"\t// {{{\n"
+			"\tinitial\to_aux = 0;\n");
 		fprintf(fp, "%s", always_reset.c_str());
 		if (with_reset) {
-			fprintf(fp, 
+			fprintf(fp,
 				"\t\to_aux <= 0;\n"
 				"\telse ");
 		}
 		fprintf(fp, "if (i_ce)\n"
-			"\t\to_aux <= i_aux;\n");
+			"\t\to_aux <= i_aux;\n\t// }}}\n\n");
+		// }}}
 	}
 	fprintf(fp, "endmodule\n");
 
@@ -148,10 +168,15 @@ void	sintable(FILE *fp, const char *fname, int lgtable, int ow,
 	hextable(fname, lgtable, ow, tbldata);
 
 	delete[] tbldata;
+	// }}}
 }
 
-void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
+void	quarterwav(FILE *fp, const char *cmdline, const char *fname,
+		int lgtable, int ow,
 		bool with_reset, bool with_aux, bool async_reset) {
+	// {{{
+	// File header
+	// {{{
 	char	*name;
 	const	char	PURPOSE[] =
 	"This is a touch more complicated than the simple sinewave table\n"
@@ -171,7 +196,7 @@ void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 		exit(EXIT_FAILURE);
 	}
 
-	legal(fp, fname, PROJECT, PURPOSE);
+	legal(fp, fname, PROJECT, PURPOSE, cmdline);
 	name = modulename(fname);
 
 	std::string	resetw = (!with_reset) ? ""
@@ -185,41 +210,58 @@ void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 			"\tif (i_reset)\n";
 	else
 		always_reset = "\talways @(posedge i_clk)\n\t";
+	// }}}
 
-
+	// Module declaration
+	// {{{
 	fprintf(fp,
-		"module	%s(i_clk, %s%si_ce, i_phase, %so_val%s);\n"
-		"\t//\n"
+		"module	%s #(\n"
+// "(i_clk, %s%si_ce, i_phase, %so_val%s);\n"
+		"\t\t// {{{\n"
 		"\tparameter\tPW =%2d, // Number of bits in the input phase\n"
-		"\t\t\tOW =%2d; // Number of output bits\n"
-		"\t//\n"
-		"\tinput\t\t\t\ti_clk, %s%si_ce;\n"
-		"\tinput\twire\t[(PW-1):0]\ti_phase;\n"
-		"\toutput\treg\t[(OW-1):0]\to_val;\n",
+		"\t\t\tOW =%2d // Number of output bits\n"
+		"\t\t// }}}\n"
+		"\t) (\n"
+		"\t\t// {{{\n"
+		"\t\tinput\twire\t\t\ti_clk, %s%si_ce,\n"
+		"\t\tinput\twire\t[(PW-1):0]\ti_phase,\n"
+		"\t\toutput\treg\t[(OW-1):0]\to_val%s\n",
 		name,
-		resetw.c_str(), (with_reset) ? ", ":"",
-		(with_aux)   ? "i_aux, ":"",
-		(with_aux)   ? ", o_aux":"",
+		// resetw.c_str(), (with_reset) ? ", ":"",
+		// (with_aux)   ? "i_aux, ":"",
+		// (with_aux)   ? ", o_aux":"",
 		lgtable, ow,
-		resetw.c_str(), (with_reset) ? ", ":"");
+		resetw.c_str(), (with_reset) ? ", ":"", (with_aux) ? ",":"");
 
 	if (with_aux)
 		fprintf(fp, "\t//\n"
-			"\tinput\twire\t\t\ti_aux;\n"
-			"\toutput\treg\t\t\to_aux;\n");
+			"\tinput\twire\t\t\ti_aux,\n"
+			"\toutput\treg\t\t\to_aux\n");
+	fprintf(fp, "\t\t// }}}\n\t);\n\n");
+	// }}}
 
+	// Declarations
+	// {{{
 	fprintf(fp,
-		"\n"
+		"\t// Declare variables and registers used\n"
+		"\t// {{{\n"
 		"\treg\t[(OW-1):0]\t\tquartertable\t[0:((1<<(PW-2))-1)];\n"
 		"\n"
 		"\tinitial\t$readmemh(\"%s.hex\", quartertable);\n"
 		"\n"
 		"\treg\t[1:0]\tnegate;\n"
 		"\treg\t[(PW-3):0]\tindex;\n"
-		"\treg\t[(OW-1):0]\ttblvalue;\n"
-		"\n", name);
+		"\treg\t[(OW-1):0]\ttblvalue;\n", name);
+	if (with_aux)
+		fprintf(fp, "\treg [1:0]\taux;\n");
+	fprintf(fp, "\t// }}}\n\n");
+	// }}}
 
+	// Processing
+	// {{{
 	fprintf(fp,
+		"\t// negate, index, tblvalue, o_val\n"
+		"\t// {{{\n"
 		"\tinitial\tnegate  = 2\'b00;\n"
 		"\tinitial\tindex   = 0;\n"
 		"\tinitial\ttblvalue= 0;\n"
@@ -239,35 +281,47 @@ void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 		"if (i_ce)\n"
 		"\tbegin\n"
 			"\t\t// Clock #1\n"
+			"\t\t// {{{\n"
 			"\t\tnegate[0] <= i_phase[(PW-1)];\n"
 			"\t\tif (i_phase[(PW-2)])\n"
 			"\t\t\tindex <= ~i_phase[(PW-3):0];\n"
 			"\t\telse\n"
 			"\t\t\tindex <=  i_phase[(PW-3):0];\n"
+			"\t\t// }}}\n"
 			""
 			"\t\t// Clock #2\n"
+			"\t\t// {{{\n"
 			"\t\ttblvalue <= quartertable[index];\n"
 			"\t\tnegate[1] <= negate[0];\n"
+			"\t\t// }}}\n"
 			""
 			"\t\t// Output Clock\n"
+			"\t\t// {{{\n"
 			"\t\tif (negate[1])\n"
 			"\t\t\to_val <= -tblvalue;\n"
 			"\t\telse\n"
 			"\t\t\to_val <=  tblvalue;\n"
-		"\tend\n\n");
+			"\t\t// }}}\n"
+		"\tend\n\t// }}}\n");
+	// }}}
 
 	if (with_aux) {
-		fprintf(fp, "\treg [1:0]\taux;\n\n"
+		// {{{
+		fprintf(fp, "\t// aux, o_aux\n\t// {{{\n"
 			"\tinitial\t{ o_aux, aux } = 0;\n");
 		fprintf(fp, "%s", always_reset.c_str());
 		if(with_reset)
 			fprintf(fp, "\t\t{ o_aux, aux } <= 0;\n"
 				"\telse ");
 		fprintf(fp, "if (i_ce)\n\t\t{ o_aux, aux } <= { aux, i_aux };\n");
+		fprintf(fp, "\t// }}}\n");
+		// }}}
 	}
 
 	fprintf(fp, "endmodule\n");
 
+	// Build the lookup table
+	// {{{
 	long	*tbldata;
 	tbldata = new long[(1<<lgtable)];
 	int	tbl_entries = (1<<lgtable);
@@ -281,6 +335,8 @@ void	quarterwav(FILE *fp, const char *fname, int lgtable, int ow,
 	}
 
 	hextable(fname, lgtable-2, ow, tbldata);
+	// }}}
 
 	delete[] tbldata;
+	// }}}
 }

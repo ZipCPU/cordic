@@ -1,16 +1,16 @@
 ################################################################################
 ##
 ## Filename:	bench/cpp/Makefile
-##
+## {{{
 ## Project:	A series of CORDIC related projects
 ##
 ## Purpose:	This file directs the build of a Verilator-based test bench to
 ##		prove that the cordic generator's outputs work.  This build
 ##	must be called after building in bench/rtl, since it depends upon the
 ##	products of that build.
-##
+## }}}
 ## Targets:
-##
+## {{{
 ##	all:	Builds cordic_tb
 ##
 ##	clean:	Cleans up all of the build products, together with the .vcd
@@ -41,9 +41,9 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2017-2020, Gisselquist Technology, LLC
-##
+## {{{
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or (at
@@ -58,14 +58,17 @@
 ## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 ## target there if the PDF file isn't present.)  If not, see
 ## <http://www.gnu.org/licenses/> for a copy.
-##
+## }}}
 ## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
 ################################################################################
 ##
-##
+## }}}
 all: cordic_tb topolar_tb quadtbl_tb seqcordic_tb seqpolar_tb
+## Flags
+## {{{
 CXX  := g++
 RTLD := ../../rtl
 ROBJD:= $(RTLD)/obj_dir
@@ -80,7 +83,10 @@ PLOBJ  := $(ROBJD)/Vtopolar__ALL.a
 SPLOBJ := $(ROBJD)/Vseqpolar__ALL.a
 QTOBJ  := $(ROBJD)/Vquadtbl__ALL.a
 CFLAGS := -g -Og -Wall $(INCS) # -faligned-new
+## }}}
 
+## Build the various test benches
+## {{{
 cordic_tb:	cordic_tb.cpp $(TBOBJ) $(ROBJD)/Vcordic.h testb.h fft.h fftw.c
 	$(CXX) $(CFLAGS) cordic_tb.cpp fftw.c $(VSRCS) $(TBOBJ) -lfftw3 -o $@
 
@@ -95,17 +101,40 @@ seqpolar_tb:	topolar_tb.cpp $(SPLOBJ) $(ROBJD)/Vseqpolar.h testb.h
 
 quadtbl_tb:	quadtbl_tb.cpp $(PLOBJ) $(ROBJD)/Vquadtbl.h testb.h fft.h fftw.c
 	$(CXX) $(CFLAGS) quadtbl_tb.cpp fftw.c $(VSRCS) $(QTOBJ) -lfftw3 -o $@
+## }}}
 
-test:	cordic_tb topolar_tb
+## Test target
+.PHONY: test
+## {{{
+test:	cordic_tb.PASS topolar_tb.PASS quadtbl_tb.PASS seqcordic_tb.PASS seqpolar_tb.PASS
+
+cordic_tb.PASS: cordic_tb
 	./cordic_tb
-	./topolar_tb
-	./quadtbl_tb
-	./seqcordic_tb
-	./seqpolar_tb
+	touch cordic_tb.PASS
 
+topolar_tb.PASS: topolar_tb
+	./topolar_tb
+	touch topolar_tb.PASS
+
+quadtbl_tb.PASS: quadtbl_tb
+	./quadtbl_tb
+	touch quadtbl_tb.PASS
+
+seqcordic_tb.PASS: seqcordic_tb
+	./seqcordic_tb
+	touch seqcordic_tb.PASS
+
+seqpolar_tb.PASS: seqpolar_tb
+	./seqpolar_tb
+	touch seqpolar_tb.PASS
+## }}}
+
+.PHONY: clean
+## {{{
 clean:
 	rm -f cordic_tb        topolar_tb      quadtbl_tb
 	rm -f cordic_tb.vcd    topolar_tb.vcd  quadtbl_tb.vcd
 	rm -f seqcordic_tb     seqpolar_tb
 	rm -f seqcordic_tb.vcd seqpolar_tb.vcd
+## }}}
 

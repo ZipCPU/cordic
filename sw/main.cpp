@@ -94,12 +94,13 @@ int	main(int argc, char **argv) {
 	const int	DEFAULT_BITWIDTH = 24;
 	int	nstages = -1, iw=-1, ow=-1, nxtra=2, phase_bits=-1, ww;
 	const char	*fname = NULL;
+	char	*cmdline;
 	bool	with_reset = true, with_aux = false;
 	bool	polar_to_rect = false, rect_to_polar = true, verbose=false,
 		gen_sintable = false, gen_quarterwav = false, c_header = false,
 		gen_quadtbl = false, async_reset = false,
 		sequential = false;
-	int	c;
+	int	c, cmdlen;
 	FILE	*fp, *fhp;
 
 	if (argc <= 1) {
@@ -110,6 +111,30 @@ int	main(int argc, char **argv) {
 		exit(EXIT_SUCCESS);
 	}
 
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Generate a copy of the command line for subsequent reference
+	// {{{
+
+	// Measure the length of the command line
+	cmdlen = 0;
+	for(int k=0; k<argc; k=k+1)
+		cmdlen += strlen(argv[k]) + 1;
+
+	// Now create a string of that length and populate it
+	cmdline = new char[cmdlen+2]; cmdline[0] = '\0';
+	for(int k=0; k<argc; k=k+1) {
+		strcat(cmdline, argv[k]);
+		if (k < argc-1)
+			strcat(cmdline, " ");
+	}
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Process user arguments
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
 	while((c = getopt(argc, argv, "aAcf:hi:n:o:p:Rrt:vx:"))!=-1) {
 		switch(c) {
 		case 'a':
@@ -204,6 +229,13 @@ int	main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 	}
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Open output files
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
 
 	fhp = NULL;
 	if ((NULL == fname)||(strlen(fname)==0)||(strcmp(fname, "-")==0)) {
@@ -222,8 +254,10 @@ int	main(int argc, char **argv) {
 				fprintf(stderr, "WARNING: Could not open %s\n", strp);
 		} free(strp);
 	}
+	// }}}
 
 	if (polar_to_rect) {
+		// {{{
 		if ((iw <= 0)&&(ow > 0))
 			iw = ow;
 		if (ow <= 0)
@@ -243,6 +277,7 @@ int	main(int argc, char **argv) {
 			nstages = calc_stages(ww, phase_bits);
 
 		if (verbose) {
+			// {{{
 			printf("Building a %s cordic with the following parameters:\n"
 			"\tOutput file     : %s\n"
 			"\tInput  bits     : %2d\n"
@@ -259,17 +294,22 @@ int	main(int argc, char **argv) {
 				printf("\tDesign will include a reset signal\n");
 			if (with_aux)
 				printf("\tAux bits will be added to the design\n");
+			// }}}
 		}
 
 		if (sequential)
-			seqcordic(fp, fhp, (fname) ? fname : "seqcordic.v",
+			seqcordic(fp, fhp, cmdline,
+				(fname) ? fname : "seqcordic.v",
 				nstages, iw, ow, nxtra, phase_bits,
 				with_reset, with_aux, async_reset);
 		else
-			basiccordic(fp, fhp, (fname) ? fname : "cordic.v",
+			basiccordic(fp, fhp, cmdline,
+				(fname) ? fname : "cordic.v",
 				nstages, iw, ow, nxtra, phase_bits,
 				with_reset, with_aux, async_reset);
+		// }}}
 	} if (rect_to_polar) {
+		// {{{
 		if ((iw <= 0)&&(ow > 0))
 			iw = ow;
 		if (ow <= 0)
@@ -286,6 +326,7 @@ int	main(int argc, char **argv) {
 		if (nstages <= 0)
 			nstages = calc_stages(phase_bits);
 		if (verbose) {
+			// {{{
 			printf("Building a rectangular-to-polar CORDIC converter with the\nfollowing parameters:\n"
 			"\tOutput file     : %s\n"
 			"\tInput  bits     : %2d\n"
@@ -299,17 +340,22 @@ int	main(int argc, char **argv) {
 				printf("\tDesign will include a reset signal\n");
 			if (with_aux)
 				printf("\tAux bits will be added to the design\n");
+			// }}}
 		}
 
 		if (sequential)
-			seqpolar(fp, fhp, (fname) ? fname : "seqtopolar.v",
+			seqpolar(fp, fhp, cmdline,
+				(fname) ? fname : "seqtopolar.v",
 				nstages, iw, ow, nxtra, phase_bits,
 				with_reset, with_aux, async_reset);
 		else
-			topolar(fp, fhp, (fname) ? fname : "topolar.v",
+			topolar(fp, fhp, cmdline,
+				(fname) ? fname : "topolar.v",
 				nstages, iw, ow, nxtra, phase_bits,
 				with_reset, with_aux, async_reset);
+		// }}}
 	} if (gen_sintable) {
+		// {{{
 		if ((iw >= 0)&&(phase_bits <= 0)) {
 			phase_bits = iw;
 			iw = -1;
@@ -331,6 +377,7 @@ int	main(int argc, char **argv) {
 		} if (phase_bits <= 0)
 			phase_bits = calc_phase_bits(ow);
 		if (verbose) {
+			// {{{
 			printf("Building a Sinewave table lookup with the following parameters:\n"
 			"\tOutput file     : %s\n"
 			"\tInput  bits     : %2d\n"
@@ -344,11 +391,14 @@ int	main(int argc, char **argv) {
 				printf("\tDesign will include a reset signal\n");
 			if (with_aux)
 				printf("\tAux bits will be added to the design\n");
+			// }}}
 		}
 
-		sintable(fp, (fname) ? fname : "sintable.v",
+		sintable(fp, cmdline, (fname) ? fname : "sintable.v",
 			phase_bits, ow, with_reset, with_aux, async_reset);
+		// }}}
 	} if (gen_quarterwav) {
+		// {{{
 		if ((iw >= 0)&&(phase_bits < 0)) {
 			phase_bits = iw;
 			iw = -1;
@@ -370,6 +420,7 @@ int	main(int argc, char **argv) {
 		} if (phase_bits <= 0)
 			phase_bits = calc_phase_bits(ow);
 		if (verbose) {
+			// {{{
 			printf("Building a Sinewave table lookup with the following parameters:\n"
 			"\tOutput file     : %s\n"
 			"\tInput  bits     : %2d\n"
@@ -383,11 +434,14 @@ int	main(int argc, char **argv) {
 				printf("\tDesign will include a reset signal\n");
 			if (with_aux)
 				printf("\tAux bits will be added to the design\n");
+			// }}}
 		}
 
-		quarterwav(fp, (fname) ? fname : "quarterwav.v",
+		quarterwav(fp, cmdline, (fname) ? fname : "quarterwav.v",
 			phase_bits, ow, with_reset, with_aux, async_reset);
+		// }}}
 	} if (gen_quadtbl) {
+		// {{{
 		if ((iw <= 0)&&(ow > 0))
 			iw = ow;
 		if (ow <= 0)
@@ -406,6 +460,7 @@ int	main(int argc, char **argv) {
 			nstages = calc_stages(ww, phase_bits);
 
 		if (verbose) {
+			// {{{
 			printf("Building a quadratically interpolated table based sine-wave calculator\n"
 			"\tOutput file     : %s\n"
 			// "\tInput  bits     : %2d\n"
@@ -421,9 +476,12 @@ int	main(int argc, char **argv) {
 				printf("\tDesign will include a reset signal\n");
 			if (with_aux)
 				printf("\tAux bits will be added to the design\n");
+			// }}}
 		}
 
-		quadtbl(fp, fhp, (fname) ? fname : "quadtbl.v", phase_bits,
-			ow, nxtra, with_reset, with_aux, async_reset);
+		quadtbl(fp, fhp, cmdline, (fname) ? fname : "quadtbl.v",
+			phase_bits, ow, nxtra, with_reset, with_aux,
+			async_reset);
+		// }}}
 	}
 }

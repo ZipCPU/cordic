@@ -45,7 +45,7 @@
 extern	const	char	PROJECT[];
 
 extern	void	legal(FILE *fp, const char *fname, const char *project,
-			const char *purpose);
+			const char *purpose, const char *cmdline = NULL);
 extern	char *modulename(const char *fname);
 
 #endif

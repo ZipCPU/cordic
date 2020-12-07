@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	../rtl/quadtbl.v
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	This is a sine-wave table lookup algorithm, coupled with a
@@ -9,13 +9,18 @@
 //	 to trade off logic, as well as to lower the phase noise associated
 //	with any phase truncation.
 //
+// This core was generated via a core generator using the following command
+// line:
+//
+//  % ./gencordic -vca -f ../rtl/quadtbl.v -p 18 -o 13 -t qtbl
+//
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This file is part of the CORDIC related project set.
 //
 // The CORDIC related project set is free software (firmware): you can
@@ -36,19 +41,27 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 `default_nettype	none
 //
-module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
-	localparam	PW=18,	// Bits in our phase variable
-			OW=13,  // The number of output bits to produce
-			XTRA= 3;// Extra bits for internal precision
-	input	wire				i_clk, i_reset, i_ce, i_aux;
-	//
-	input	wire	signed	[(PW-1):0]	i_phase;
-	output	reg	signed	[(OW-1):0]	o_sin;
-	output	reg				o_aux;
+module	quadtbl #(
+		// {{{
+		localparam	PW=18,	// Bits in our phase variable
+				OW=13,  // The number of output bits to produce
+				XTRA= 3 // Extra bits for internal precision
+		// }}}
+	) (
+		// {{{
+		input	wire				i_clk, i_reset, i_ce, i_aux,
+		//
+		input	wire	signed	[(PW-1):0]	i_phase,
+		output	reg	signed	[(OW-1):0]	o_sin,
+		output	reg				o_aux
+		// }}}
+	);
 
+	// Declarations
+	// {{{
 	localparam	LGTBL=6,
 			DXBITS  = (PW-LGTBL)+1,  // 13
 			TBLENTRIES = (1<<LGTBL), // 64
@@ -83,12 +96,17 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	reg	[(LBITS-1):0]	ltbl [0:(TBLENTRIES-1)]; // 13 x 64
 	reg	[(QBITS-1):0]	qtbl [0:(TBLENTRIES-1)]; // 9 x 64
 
+	reg	[(WW-1):0]	w_value;
 	initial begin
 		$readmemh("quadtbl_ctbl.hex", ctbl);
 		$readmemh("quadtbl_ltbl.hex", ltbl);
 		$readmemh("quadtbl_qtbl.hex", qtbl);
 	end
 
+	// }}}
+
+	// aux, o_aux logic
+	// {{{
 	initial	aux = 0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -96,11 +114,12 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	else if (i_ce)
 			aux <= { aux[(NSTAGES-2):0], i_aux };
 	assign	o_aux = aux[(NSTAGES-1)];
+	// }}}
 
 	////////////////////////////////////////////////////////////////////////
 	//
-	//
 	// Clock 1
+	// {{{
 	//	1. Operate on the incoming bits--this is the only stage
 	//	   that does so
 	//	2. Read our coefficients from the table
@@ -135,10 +154,11 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	// A basic quadratic interpolant.  All of the smarts are found within
 	// the Q, L, and C values.
 
+	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	//
 	// Clock 2
+	// {{{
 	//	1. Multiply to get the quadratic component of our design
 	//		This is the first of two multiplies used by this
 	//		algorithm
@@ -164,10 +184,11 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 		dx_1 <= dx;
 	end
 
+	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	//
 	// Clock 3
+	// {{{
 	//	1. Select the number of bits we want from the output
 	//	2. Add our linear term to the result of the multiply
 	//	3. Copy the remaining values for the next clock
@@ -195,10 +216,11 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 		dx_2 <= dx_1;
 	end
 
+	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	//
 	// Clock 4
+	// {{{
 	//	1. Our second and final multiply
 	//	2. Copy the constant coefficient value to the next clock
 	//
@@ -215,10 +237,11 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	else if (i_ce)
 		cv_3 <= cv_2;
 
+	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	//
 	// Clock 5
+	// {{{
 	//	1. Add the constant value to the result of the last
 	//	   multiplication.  This will be the output of our algorithm
 	//	2. There's nothing left to copy
@@ -233,10 +256,11 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	else if (i_ce)
 		r_value <= w_lprod + cv_3;
 
+	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	//
 	// Clock 6
+	// {{{
 	//	1. The last and final step is to round the output to the
 	//	   nearest value.  This also involves dropping the extra bits
 	//	   we've been carrying around since the last multiply.
@@ -246,8 +270,6 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 	// Since we won't be using all of the bits in w_value, we'll just
 	// mark them all as unused for Verilator's linting purposes
 	//
-	// verilator lint_off UNUSED
-	reg	[(WW-1):0]	w_value;
 	always @(*)
 		if ((!r_value[WW-1])&&(&r_value[(WW-2):XTRA]))
 			w_value = r_value;
@@ -257,26 +279,27 @@ module	quadtbl(i_clk, i_reset, i_ce,  i_aux,i_phase, o_sin, o_aux);
 			w_value = r_value + { {(OW){1'b0}},
 				r_value[(WW-OW)],
 				{(WW-OW-1){!r_value[(WW-OW)]}} };
-	// verilator lint_on  UNUSED
-
-	//
+	// }}}
 	//
 	// Calculate the final result
-	//
+	// {{{
 	initial	o_sin = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		o_sin <= 0;
 	else if (i_ce)
 		o_sin <= w_value[(WW-1):XTRA]; // [19:3]
+	// }}}
 
 	// Make verilator happy
+	// {{{
 	// verilator lint_off UNUSED
-	wire	[(2*(DXBITS)+XTRA-1):0] unused;
-	assign	unused = {
+	wire	 unused;
+	assign	unused = &{ 1'b0, w_value,
 			lprod[(DXBITS-1):0],
 			r_value[(XTRA-1):0],
 			qprod[(DXBITS-1):0] };
 	// verilator lint_on  UNUSED
+	// }}}
 
 endmodule

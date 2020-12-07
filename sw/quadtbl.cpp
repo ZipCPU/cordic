@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	quadtbl.cpp
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	
@@ -10,9 +10,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -27,14 +27,15 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <string>
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,6 +68,7 @@ typedef	std::string	STRING;
  * der/ddx = TBL.l[xo]+2TBL.q[xo] * dx - 2PI/N cos(2PI(xo+dx)/N)
  */
 double	est_max_err(double c, double l, double q, double idx, int N) {
+// {{{
 	double	lft, rht, mid, ph;
 
 	ph = 2.0 * M_PI * idx / (double)N;
@@ -75,7 +77,7 @@ double	est_max_err(double c, double l, double q, double idx, int N) {
 	rht = c + l + q - sin(ph);
 
 
-	// 
+	//
 	// The following is very brute force-ish.  It doesn't need to be.
 	// For large N, a sine-wave is *very* well behaved.  Brent's algorithm
 	// might make more sense here, *and* get us a better answer faster.
@@ -102,16 +104,20 @@ double	est_max_err(double c, double l, double q, double idx, int N) {
 		er = mid;
 
 	return er;
+// }}}
 }
 
 double	quadtbl_spur(int lgtbl) {
+// {{{
 	double	spur_magnitude;
 	spur_magnitude = pow(sinc(1.0-(1./(1<<lgtbl))),3.);
 	// spur = 20.*log(spur)/log(10.0);
 	return spur_magnitude;
+// }}}
 }
 
 int	pick_tbl_size(int ww) {
+// {{{
 	// Spur magnitude must be less than 0.5^ww
 	double	limit = pow(0.5,ww);
 	int	lgtbl;
@@ -120,10 +126,12 @@ int	pick_tbl_size(int ww) {
 		if (quadtbl_spur(lgtbl) < limit)
 			return lgtbl;
 	} return 11;
+// }}}
 }
 
 void	build_quadtbls(const char *fname, const int lgsz, const int wid,
 		int &cbits, int &lbits, int &qbits, double &tblerr) {
+// {{{
 	int	tbl_entries = (1<<lgsz);
 	long	maxv = max_integer(wid);
 	double	dl = M_PI / (double)tbl_entries, dph= dl * 2.;
@@ -256,10 +264,13 @@ void	build_quadtbls(const char *fname, const int lgsz, const int wid,
 	delete[] slope;
 	delete[] dslope;
 	delete[] tbldata;
+// }}}
 }
 
-void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
-		int nxtra, bool with_reset, bool with_aux, bool async_reset) {
+void	quadtbl(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
+		int phase_bits, int ow, int nxtra, bool with_reset,
+		bool with_aux, bool async_reset) {
+	// {{{
 	const	char	*name;
 	char	*noext;
 	int	lgtbl = pick_tbl_size(ow+nxtra);
@@ -300,7 +311,7 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 	"//\t\twithin the generated file.  It is used to communicate\n"
 	"//\tinformation about the design to the bench testing code.";
 
-	legal(fp, fname, PROJECT, PURPOSE);
+	legal(fp, fname, PROJECT, PURPOSE, cmdline);
 	if (nxtra < 2)
 		nxtra = 2;
 	assert(phase_bits >= 3);
@@ -323,25 +334,36 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 
 	fprintf(fp, "`default_nettype\tnone\n//\n");
 	fprintf(fp,
-		"module	%s(i_clk, %s%si_ce, %si_phase, o_sin%s);\n"
-		"\tlocalparam\tPW=%2d,\t// Bits in our phase variable\n"
-		"\t\t\tOW=%2d,  // The number of output bits to produce\n"
-		"\t\t\tXTRA=%2d;// Extra bits for internal precision\n"
-		"\tinput\twire\t\t\t\ti_clk, %s%si_ce%s;\n"
-		"\t//\n"
-		"\tinput\twire\tsigned\t[(PW-1):0]\ti_phase;\n"
-		"\toutput\treg\tsigned\t[(OW-1):0]\to_sin;\n",
-		name, resetw.c_str(), (with_reset)?", ":"",
-		(with_aux)?" i_aux,":"",
-		(with_aux)?", o_aux":"",
+		"module	%s #(\n"
+// (i_clk, %s%si_ce, %si_phase, o_sin%s);\n"
+		"\t\t// {{{\n"
+		"\t\tlocalparam\tPW=%2d,\t// Bits in our phase variable\n"
+		"\t\t\t\tOW=%2d,  // The number of output bits to produce\n"
+		"\t\t\t\tXTRA=%2d // Extra bits for internal precision\n"
+		"\t\t// }}}\n"
+		"\t) (\n"
+		"\t\t// {{{\n"
+		"\t\tinput\twire\t\t\t\ti_clk, %s%si_ce%s,\n"
+		"\t\t//\n"
+		"\t\tinput\twire\tsigned\t[(PW-1):0]\ti_phase,\n"
+		"\t\toutput\treg\tsigned\t[(OW-1):0]\to_sin%s\n",
+		name,
+		// resetw.c_str(), (with_reset)?", ":"",
+		// (with_aux)?" i_aux,":"",
+		// (with_aux)?", o_aux":"",
 		phase_bits, ow, nxtra,
 		resetw.c_str(), (with_reset)?", ":"",
-		(with_aux)?", i_aux":"");
+		(with_aux)?", i_aux":"", (with_aux) ? ",":"");
 
 
 	if (with_aux)
-		fprintf(fp, "\toutput\treg\t\t\t\to_aux;\n\n");
+		fprintf(fp, "\t\toutput\treg\t\t\t\to_aux\n");
 
+	fprintf(fp,
+		"\t\t// }}}\n\t);\n\n");
+
+	fprintf(fp,
+		"\t// Declarations\n\t// {{{\n");
 	fprintf(fp,
 	"\tlocalparam\tLGTBL=%d,\n"
 			"\t\t\tDXBITS  = (PW-LGTBL)+1,  // %d\n"
@@ -407,6 +429,8 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 		fprintf(fp,
 	"\treg	[(QBITS-1):0]	qtbl [0:(TBLENTRIES-1)]; // %d x %d\n\n",
 		qbits, (1<<lgtbl));
+	fprintf(fp,
+	"\treg	[(WW-1):0]	w_value;\n");
 
 	fprintf(fp,
 	"\tinitial begin\n"
@@ -417,9 +441,12 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 		"\t\t$readmemh(\"%s_qtbl.hex\", qtbl);\n", name);
 	fprintf(fp,
 		"\tend\n\n");
+	fprintf(fp, "\t// }}}\n\n");
 
 	if (with_aux) {
 		fprintf(fp,
+		"\t// aux, o_aux logic\n"
+		"\t// {{{\n"
 		"\tinitial	aux = 0;\n");
 
 		fprintf(fp, "%s", always_reset.c_str());
@@ -428,18 +455,19 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 			fprintf(fp,
 			"\t\taux <= 0;\n"
 			"\telse ");
-	
+
 		fprintf(fp,
 		"if (i_ce)\n"
 			"\t\t\taux <= { aux[(NSTAGES-2):0], i_aux };\n"
-			"\tassign	o_aux = aux[(NSTAGES-1)];\n\n");
+			"\tassign	o_aux = aux[(NSTAGES-1)];\n");
+		fprintf(fp, "\t// }}}\n\n");
 	}
 
 	fprintf(fp,
 	"\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t//\n"
 	"\t// Clock 1\n"
+	"\t// {{{\n"
 	"\t//	1. Operate on the incoming bits--this is the only stage\n"
 	"\t//	   that does so\n"
 	"\t//	2. Read our coefficients from the table\n"
@@ -499,10 +527,11 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 
 	if (!NO_QUADRATIC_COMPONENT) {
 	fprintf(fp,
+	"\t// }}}\n"
 	"\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t//\n"
 	"\t// Clock 2\n"
+	"\t// {{{\n"
 	"\t//	1. Multiply to get the quadratic component of our design\n"
 	"\t//		This is the first of two multiplies used by this\n"
 	"\t//		algorithm\n"
@@ -541,10 +570,11 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 
 	if (!NO_QUADRATIC_COMPONENT) {
 		fprintf(fp,
+		"\t// }}}\n"
 		"\t////////////////////////////////////////////////////////////////////////\n"
 		"\t//\n"
-		"\t//\n"
 		"\t// Clock 3\n"
+		"\t// {{{\n"
 		"\t//	1. Select the number of bits we want from the output\n"
 		"\t//	2. Add our linear term to the result of the multiply\n"
 		"\t//	3. Copy the remaining values for the next clock\n"
@@ -589,10 +619,11 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 
 
 	fprintf(fp,
+	"\t// }}}\n"
 	"\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t//\n"
 	"\t// Clock %d\n"
+	"\t// {{{\n"
 	"\t//	1. Our %s multiply\n"
 	"\t//	2. Copy the constant coefficient value to the next clock\n"
 	"\t//\n"
@@ -625,10 +656,11 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 			(NO_QUADRATIC_COMPONENT)?"":"_2");
 
 	fprintf(fp,
+	"\t// }}}\n"
 	"\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t//\n"
 	"\t// Clock %d\n"
+	"\t// {{{\n"
 	"\t//	1. Add the constant value to the result of the last\n"
 	"\t//	   multiplication.  This will be the output of our algorithm\n"
 	"\t//	2. There's nothing left to copy\n"
@@ -663,10 +695,11 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 			(NO_QUADRATIC_COMPONENT)?1:3);
 
 	fprintf(fp,
+	"\t// }}}\n"
 	"\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t//\n"
 	"\t// Clock %d\n"
+	"\t// {{{\n"
 	"\t//	1. The last and final step is to round the output to the\n"
 	"\t//	   nearest value.  This also involves dropping the extra bits\n"
 	"\t//	   we've been carrying around since the last multiply.\n"
@@ -679,8 +712,6 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 	"\t//\n");
 
 	fprintf(fp,
-	"\t// verilator lint_off UNUSED\n"
-	"\treg	[(WW-1):0]	w_value;\n"
 	"\talways @(*)\n"
 	"\t\tif ((!r_value[WW-1])&&(&r_value[(WW-2):XTRA]))\n"
 	"\t\t\tw_value = r_value;\n"
@@ -689,14 +720,15 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 	"\t\telse\n"
 	"\t\t\tw_value = r_value + { {(OW){1'b0}},\n"
 				"\t\t\t\tr_value[(WW-OW)],\n"
-				"\t\t\t\t{(WW-OW-1){!r_value[(WW-OW)]}} };\n"
-	"\t// verilator lint_on  UNUSED\n\n");
+				"\t\t\t\t{(WW-OW-1){!r_value[(WW-OW)]}} };\n");
+	fprintf(fp, "\t// }}}\n");
 
+	// Output the final result
+	// {{{
 	fprintf(fp,
 	"\t//\n"
-	"\t//\n"
 	"\t// Calculate the final result\n"
-	"\t//\n"
+	"\t// {{{\n"
 	"\tinitial	o_sin = 0;\n");
 
 	fprintf(fp, "%s", always_reset.c_str());
@@ -705,14 +737,18 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 
 	fprintf(fp,
 		"if (i_ce)\n"
-			"\t\to_sin <= w_value[(WW-1):XTRA]; // [%d:%d]\n\n",
+			"\t\to_sin <= w_value[(WW-1):XTRA]; // [%d:%d]\n\t// }}}\n\n",
 			ww, nxtra);
+	// }}}
 
+	// Make Verilator happy
+	// {{{
 	fprintf(fp,
 	"\t// Make verilator happy\n"
+	"\t// {{{\n"
 	"\t// verilator lint_off UNUSED\n"
-	"\twire	[(2*(DXBITS)+XTRA-1):0] unused;\n"
-	"\tassign	unused = {\n"
+	"\twire	 unused;\n"
+	"\tassign	unused = &{ 1\'b0, w_value,\n"
 			"\t\t\tlprod[(DXBITS-1):0],\n"
 			// "\t\t\tr_value[(CBITS-1):WW],\n"
 			"\t\t\tr_value[(XTRA-1):0],\n");
@@ -724,11 +760,13 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 			"\t\t\tqprod[(DXBITS-1):0] };\n");
 	}
 
-	fprintf(fp, "\t// verilator lint_on  UNUSED\n\n");
-
+	fprintf(fp, "\t// verilator lint_on  UNUSED\n"
+			"\t// }}}\n\n");
+	// }}}
 	fprintf(fp, "endmodule\n");
 
 	if (NULL != fhp) {
+		// {{{
 		char	*str = new char[strlen(name)+4], *ptr;
 		sprintf(str, "%s.h", name);
 		legal(fhp, str, PROJECT, HPURPOSE);
@@ -774,7 +812,9 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *fname, int phase_bits, int ow,
 		fprintf(fhp, "#endif	// %s\n", str);
 
 		delete[] str;
+		// }}}
 	}
 
 	free(noext);
+	// }}}
 }

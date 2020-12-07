@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	basiccordic.cpp
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	
@@ -10,9 +10,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -27,14 +27,15 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -46,7 +47,7 @@
 #include "cordiclib.h"
 #include "basiccordic.h"
 
-void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
+void	basiccordic(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
 		int nstages, int iw, int ow, int nxtra,
 		int phase_bits,
 		bool with_reset, bool with_aux, bool async_reset) {
@@ -62,7 +63,7 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 	"This .h file notes the default parameter values from\n"
 	"//\t\twithin the generated file.  It is used to communicate\n"
 	"//\tinformation about the design to the bench testing code.";
-	legal(fp, fname, PROJECT, PURPOSE);
+	legal(fp, fname, PROJECT, PURPOSE, cmdline);
 	if (nxtra < 1)
 		nxtra = 1;
 	assert(phase_bits >= 3);
@@ -83,40 +84,55 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 
 	name = modulename(fname);
 
-	fprintf(fp, "`default_nettype\tnone\n//\n");
+	fprintf(fp, "`default_nettype\tnone\n");
 	fprintf(fp,
-		"module	%s(i_clk, %s%si_ce, i_xval, i_yval, i_phase,%s\n"
-		"\t\to_xval, o_yval%s);\n"
+		"module	%s#(\n"
+		"\t\t// {{{\n"
 		"\tlocalparam\tIW=%2d,\t// The number of bits in our inputs\n"
 		"\t\t\tOW=%2d,\t// The number of output bits to produce\n"
 		"\t\t\tNSTAGES=%2d,\n"
 		"\t\t\tXTRA=%2d,// Extra bits for internal precision\n"
 		"\t\t\tWW=%2d,\t// Our working bit-width\n"
-		"\t\t\tPW=%2d;\t// Bits in our phase variables\n"
-		"\tinput\twire\t\t\t\ti_clk, %s%si_ce;\n"
-		"\tinput\twire\tsigned\t[(IW-1):0]\t\ti_xval, i_yval;\n"
-		"\tinput\twire\t\t[(PW-1):0]\t\t\ti_phase;\n"
-		"\toutput\treg\tsigned\t[(OW-1):0]\to_xval, o_yval;\n",
-		name, resetw.c_str(), (with_reset)?", ":"",
-		(with_aux)?" i_aux,":"", (with_aux)?", o_aux":"",
+		"\t\t\tPW=%2d\t// Bits in our phase variables\n"
+		"\t\t// }}}\n"
+		"\t) (\n"
+		"\t\t// {{{\n"
+		"\tinput\twire\t\t\t\ti_clk, %s%si_ce,\n"
+		"\tinput\twire\tsigned\t[(IW-1):0]\t\ti_xval, i_yval,\n"
+		"\tinput\twire\t\t[(PW-1):0]\t\t\ti_phase,\n"
+		"\toutput\treg\tsigned\t[(OW-1):0]\to_xval, o_yval%s\n",
+		name,
 		iw, ow, nstages, nxtra, working_width, phase_bits,
-		resetw.c_str(), (with_reset)?", ":"");
+		resetw.c_str(), (with_reset)?", ":"", (with_aux)?",":"");
 
 	if (with_aux) {
 		fprintf(fp,
-			"\tinput\twire\t\t\t\ti_aux;\n"
-			"\toutput\treg\t\t\t\to_aux;\n");
-	}
+			"\tinput\twire\t\t\t\ti_aux,\n"
+			"\toutput\treg\t\t\t\to_aux\n");
+	} fprintf(fp, "\t\t// }}}\n\t);\n\n");
 
 	fprintf(fp,
+		"\t// Declare variables for all of the separate stages\n"
+		"\t// {{{\n"
+		"\twire\tsigned [(WW-1):0]\te_xval, e_yval;\n"
+		"\treg	signed	[(WW-1):0]\txv\t[0:(NSTAGES)];\n"
+		"\treg	signed	[(WW-1):0]\tyv\t[0:(NSTAGES)];\n"
+		"\treg		[(PW-1):0]\tph\t[0:(NSTAGES)];\n");
+	if (with_aux)
+		fprintf(fp, "\treg\t\t[(NSTAGES):0]\tax;\n");
+	fprintf(fp,
+		"\t// }}}\n\n");
+
+	fprintf(fp,
+		"\t// Sign extend our inputs\n"
+		"\t// {{{\n"
 		"\t// First step: expand our input to our working width.\n"
 		"\t// This is going to involve extending our input by one\n"
 		"\t// (or more) bits in addition to adding any xtra bits on\n"
 		"\t// bits on the right.  The one bit extra on the left is to\n"
 		"\t// allow for any accumulation due to the cordic gain\n"
 		"\t// within the algorithm.\n"
-		"\t// \n"
-		"\twire\tsigned [(WW-1):0]\te_xval, e_yval;\n");
+		"\t// \n");
 
 	if (working_width-iw-1 > 0) {
 		fprintf(fp,
@@ -126,21 +142,13 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		fprintf(fp,
 			"\tassign\te_xval = { {i_xval[(IW-1)]}, i_xval };\n"
 			"\tassign\te_yval = { {i_yval[(IW-1)]}, i_yval };\n\n");
-	}
-
-	fprintf(fp,
-		"\t// Declare variables for all of the separate stages\n");
-
-	fprintf(fp,
-		"\treg	signed	[(WW-1):0]	xv	[0:(NSTAGES)];\n"
-		"\treg	signed	[(WW-1):0]	yv	[0:(NSTAGES)];\n"
-		"\treg		[(PW-1):0]	ph	[0:(NSTAGES)];\n\n");
+	} fprintf(fp, "\t// }}}\n");
 
 	if (with_aux) {
 		fprintf(fp,
 "\t//\n"
 "\t// Handle the auxilliary logic.\n"
-"\t//\n"
+"\t// {{{\n"
 "\t// The auxilliary bit is designed so that you can place a valid bit into\n"
 "\t// the CORDIC function, and see when it comes out.  While the bit is\n"
 "\t// allowed to be anything, the requirement of this bit is that it *must*\n"
@@ -148,7 +156,6 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 "\t// are input together with i_aux, then when o_xval and o_yval are set\n"
 "\t// to this value, o_aux *must* contain the value that was in i_aux.\n"
 "\t//\n"
-"\treg\t\t[(NSTAGES):0]\tax;\n"
 "\n"
 "\tinitial\tax = 0;\n");
 
@@ -159,10 +166,12 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 				"\t\tax <= 0;\n\telse ");
 		fprintf(fp, "if (i_ce)\n"
 			"\t\tax <= { ax[(NSTAGES-1):0], i_aux };\n"
-			"\n");
+			"\t// }}}\n\n");
 	}
 
 	fprintf(fp,
+		"\t// Pre-CORDIC rotation\n"
+		"\t// {{{\n"
 		"\t// First stage, get rid of all but 45 degrees\n"
 		"\t//\tThe resulting phase needs to be between -45 and 45\n"
 		"\t//\t\tdegrees but in units of normalized phase\n");
@@ -186,80 +195,102 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 
 	fprintf(fp, "if (i_ce)\n"
 		"\tbegin\n"
+		"\t\t// {{{\n"
 		"\t\t// Walk through all possible quick phase shifts necessary\n"
 		"\t\t// to constrain the input to within +/- 45 degrees.\n"
+		"\t\t// This is a zero-gain operation, involving only sign\n"
+		"\t\t// adjustments.\n"
 		"\t\tcase(i_phase[(PW-1):(PW-3)])\n");
 
 	fprintf(fp,
 		"\t\t3'b000: begin	// 0 .. 45, No change\n"
+		"\t\t// {{{\n"
 		"\t\t\txv[0] <= e_xval;\n"
 		"\t\t\tyv[0] <= e_yval;\n"
 		"\t\t\tph[0] <= i_phase;\n"
-		"\t\t\tend\n");
+		"\t\t\tend\n"
+		"\t\t\t// }}}\n");
 
 	fprintf(fp,
 		"\t\t3'b001: begin	// 45 .. 90\n"
+		"\t\t// {{{\n"
 		"\t\t\txv[0] <= -e_yval;\n"
 		"\t\t\tyv[0] <= e_xval;\n"
 		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\tend\n",
+		"\t\t\tend\n"
+		"\t\t\t// }}}\n",
 			phase_bits, (1ul << (phase_bits-2)));
 
 	fprintf(fp,
 		"\t\t3'b010: begin	// 90 .. 135\n"
+		"\t\t// {{{\n"
 		"\t\t\txv[0] <= -e_yval;\n"
 		"\t\t\tyv[0] <= e_xval;\n"
 		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\tend\n",
+		"\t\t\tend\n"
+		"\t\t\t// }}}\n",
 			phase_bits, (1ul << (phase_bits-2)));
 
 	fprintf(fp,
 		"\t\t3'b011: begin	// 135 .. 180\n"
+		"\t\t// {{{\n"
 		"\t\t\txv[0] <= -e_xval;\n"
 		"\t\t\tyv[0] <= -e_yval;\n"
 		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\tend\n",
+		"\t\t\tend\n"
+		"\t\t\t// }}}\n",
 			phase_bits, (2ul << (phase_bits-2)));
 
 	fprintf(fp,
 		"\t\t3'b100: begin	// 180 .. 225\n"
+		"\t\t// {{{\n"
 		"\t\t\txv[0] <= -e_xval;\n"
 		"\t\t\tyv[0] <= -e_yval;\n"
 		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\tend\n",
+		"\t\t\tend\n"
+		"\t\t\t// }}}\n",
 			phase_bits, (2ul << (phase_bits-2)));
 
 	fprintf(fp,
 		"\t\t3'b101: begin	// 225 .. 270\n"
+		"\t\t// {{{\n"
 		"\t\t\txv[0] <= e_yval;\n"
 		"\t\t\tyv[0] <= -e_xval;\n"
 		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\tend\n",
+		"\t\t\tend\n"
+		"\t\t\t// }}}\n",
 		phase_bits, (3ul << (phase_bits-2)));
 
 	fprintf(fp,
 		"\t\t3'b110: begin	// 270 .. 315\n"
+		"\t\t// {{{\n"
 		"\t\t\txv[0] <= e_yval;\n"
 		"\t\t\tyv[0] <= -e_xval;\n"
 		"\t\t\tph[0] <= i_phase - %d\'h%lx;\n"
-		"\t\t\tend\n",
+		"\t\t\tend\n"
+		"\t\t\t// }}}\n",
 		phase_bits, (3ul << (phase_bits-2)));
 
 	fprintf(fp,
 		"\t\t3'b111: begin	// 315 .. 360, No change\n"
+		"\t\t// {{{\n"
 		"\t\t\txv[0] <= e_xval;\n"
 		"\t\t\tyv[0] <= e_yval;\n"
 		"\t\t\tph[0] <= i_phase;\n"
-		"\t\t\tend\n");
+		"\t\t\tend\n"
+		"\t\t\t// }}}\n");
 
 	fprintf(fp,
 		"\t\tendcase\n"
+		"\t\t// }}}\n"
 		"\tend\n"
-		"\n");
+		"\t// }}}\n");
 
 	cordic_angles(fp, nstages, phase_bits);
 
 	fprintf(fp,"\n"
+		"\t// CORDIC rotations\n"
+		"\t// {{{\n"
 		"\tgenvar	i;\n"
 		"\tgenerate for(i=0; i<NSTAGES; i=i+1) begin : CORDICops\n");
 	fprintf(fp,
@@ -272,15 +303,17 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 			"\t\t\txv[i+1] = 0;\n"
 			"\t\t\tyv[i+1] = 0;\n"
 			"\t\t\tph[i+1] = 0;\n"
-			"\t\tend\n\t");
+			"\t\tend\n\n\t");
 	}
 	fprintf(fp, "%s", always_reset.c_str());
 	if (with_reset) {
 		fprintf(fp,
 			"\t\tbegin\n"
+			"\t\t\t// {{{\n"
 			"\t\t\txv[i+1] <= 0;\n"
 			"\t\t\tyv[i+1] <= 0;\n"
 			"\t\t\tph[i+1] <= 0;\n"
+			"\t\t\t// }}}\n"
 			"\t\tend else ");
 	} else
 		fprintf(fp, "\t\t");
@@ -288,41 +321,50 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 	fprintf(fp,
 		"if (i_ce)\n"
 		"\t\tbegin\n"
+		"\t\t\t// {{{\n"
 		"\t\t\tif ((cordic_angle[i] == 0)||(i >= WW))\n"
 		"\t\t\tbegin // Do nothing but move our outputs\n"
 		"\t\t\t// forward one stage, since we have more\n"
 		"\t\t\t// stages than valid data\n"
+		"\t\t\t\t// {{{\n"
 		"\t\t\t\txv[i+1] <= xv[i];\n"
 		"\t\t\t\tyv[i+1] <= yv[i];\n"
 		"\t\t\t\tph[i+1] <= ph[i];\n"
+		"\t\t\t\t// }}}\n"
 		"\t\t\tend else if (ph[i][(PW-1)]) // Negative phase\n"
 		"\t\t\tbegin\n"
+		"\t\t\t\t// {{{\n"
 		"\t\t\t\t// If the phase is negative, rotate by the\n"
 		"\t\t\t\t// CORDIC angle in a clockwise direction.\n"
 		"\t\t\t\txv[i+1] <= xv[i] + (yv[i]>>>(i+1));\n"
 		"\t\t\t\tyv[i+1] <= yv[i] - (xv[i]>>>(i+1));\n"
 		"\t\t\t\tph[i+1] <= ph[i] + cordic_angle[i];\n"
+		"\t\t\t\t// }}}\n"
 		"\t\t\tend else begin\n"
+		"\t\t\t\t// {{{\n"
 		"\t\t\t\t// On the other hand, if the phase is\n"
 		"\t\t\t\t// positive ... rotate in the\n"
 		"\t\t\t\t// counter-clockwise direction\n"
 		"\t\t\t\txv[i+1] <= xv[i] - (yv[i]>>>(i+1));\n"
 		"\t\t\t\tyv[i+1] <= yv[i] + (xv[i]>>>(i+1));\n"
 		"\t\t\t\tph[i+1] <= ph[i] - cordic_angle[i];\n"
+		"\t\t\t\t// }}}\n"
 		"\t\t\tend\n"
+		"\t\t\t// }}}\n"
 		"\t\tend\n"
-		"\tend endgenerate\n\n");
+		"\tend endgenerate\n\t// }}}\n\n");
 
 	if (working_width > ow+1) {
 		fprintf(fp,
 			"\t// Round our result towards even\n"
+			"\t// {{{\n"
 			"\twire\t[(WW-1):0]\tpre_xval, pre_yval;\n\n"
-			"\tassign\tpre_xval = xv[NSTAGES] + $signed({{(OW){1\'b0}},\n"
+			"\tassign\tpre_xval = xv[NSTAGES] + $signed({ {(OW){1\'b0}},\n"
 				"\t\t\t\txv[NSTAGES][(WW-OW)],\n"
-				"\t\t\t\t{(WW-OW-1){!xv[NSTAGES][WW-OW]}}});\n"
-			"\tassign\tpre_yval = yv[NSTAGES] + $signed({{(OW){1\'b0}},\n"
+				"\t\t\t\t{(WW-OW-1){!xv[NSTAGES][WW-OW]}} });\n"
+			"\tassign\tpre_yval = yv[NSTAGES] + $signed({ {(OW){1\'b0}},\n"
 				"\t\t\t\tyv[NSTAGES][(WW-OW)],\n"
-				"\t\t\t\t{(WW-OW-1){!yv[NSTAGES][WW-OW]}}});\n"
+				"\t\t\t\t{(WW-OW-1){!yv[NSTAGES][WW-OW]}} });\n"
 			"\n\n");
 
 		fprintf(fp, "\tinitial begin\n"
@@ -350,19 +392,24 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		if (with_aux)
 			fprintf(fp,
 			"\t\to_aux <= ax[NSTAGES];\n");
-		fprintf(fp, "\tend\n\n");
+		fprintf(fp, "\tend\n\t// }}}\n");
 
 		fprintf(fp, "\t// Make Verilator happy with pre_.val\n"
+			"\t// {{{\n"
 			"\t// verilator lint_off UNUSED\n"
-			"\twire	[(2*(WW-OW)-1):0] unused_val;\n"
-			"\tassign\tunused_val = {\n"
+			"\twire	unused_val;\n"
+			"\tassign\tunused_val = &{ 1\'b0, \n"
 			"\t\tpre_xval[(WW-OW-1):0],\n"
 			"\t\tpre_yval[(WW-OW-1):0]\n"
 			"\t\t};\n"
+			"\t// }}}\n"
 			"\t// verilator lint_on UNUSED\n");
 	} else {
 
-		fprintf(fp, "\tinitial begin\n"
+		fprintf(fp,
+			"\t// No rounding required\n"
+			"\t// {{{\n"
+			"\tinitial begin\n"
 			"\t\to_xval = 0;\n"
 			"\t\to_yval = 0;\n");
 		if (with_aux)
@@ -373,22 +420,27 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *fname,
 		if (with_reset) {
 			fprintf(fp,
 			"\tbegin\n"
+			"\t\t// {{{\n"
 			"\t\to_xval <= 0;\n"
 			"\t\to_yval <= 0;\n");
 			if (with_aux)
 				fprintf(fp, "\t\to_aux  <= 0;\n");
 			fprintf(fp,
+			"\t\t// }}}\n"
 			"\tend else ");
 		}
 
 		fprintf(fp,
 			"if (i_ce)\n"
+			"\t// {{{\n"
 			"\tbegin\t// We accumulate a bit during our processing, so shift by one\n"
 			"\t\to_xval <= xv[NSTAGES][(WW-1):(WW-OW)];\n"
 			"\t\to_yval <= yv[NSTAGES][(WW-1):(WW-OW)];\n");
 		if (with_aux)
 			fprintf(fp, "\t\to_aux  <= ax[NSTAGES];\n");
-		fprintf(fp, "\tend\n\n");
+		fprintf(fp,
+			"\t// }}}\n"
+			"\tend\n\n");
 	}
 
 	fprintf(fp, "endmodule\n");

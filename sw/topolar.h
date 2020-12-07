@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	topolar.h
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	
@@ -10,9 +10,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -27,20 +27,22 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #ifndef	TOPOLAR_H
 #define	TOPOLAR_H
 
 #include <stdio.h>
 
-extern	void	topolar(FILE *fp, FILE *fhp, const char *fname,
+extern	void	topolar(FILE *fp, FILE *fhp, const char *cmdline,
+			const char *fname,
 			int nstages, int iw, int ow, int nxtra,
 			int phase_bits=32,
 			bool with_reset=true, bool with_aux = true,

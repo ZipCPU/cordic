@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	cordiclib.cpp
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	
@@ -10,9 +10,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -34,7 +34,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -43,7 +43,7 @@
 #include "cordiclib.h"
 
 // nextlg
-//
+// {{{
 // Returns the ceiling of the log_2 of vl.  Hence,
 //   for 3 the result will be 2
 //   for 4 the result will be 2
@@ -60,8 +60,10 @@ int	nextlg(unsigned vl) {
 		;
 	return lg;
 }
+// }}}
 
 double	cordic_gain(int nstages) {
+// {{{
 	double	gain = 1.0;
 
 	for(int k=0; k<nstages; k++) {
@@ -73,9 +75,11 @@ double	cordic_gain(int nstages) {
 	}
 
 	return gain;
+// }}}
 }
 
 double	phase_variance(int nstages, int phase_bits) {
+// {{{
 	double	RAD_TO_PHASE = (1ul << (phase_bits-1)) / M_PI;
 	double	variance;
 
@@ -100,9 +104,12 @@ double	phase_variance(int nstages, int phase_bits) {
 	// Convert the calculated variance back to radians
 	variance /= pow(RAD_TO_PHASE,2.);
 	return variance;
+// }}}
 }
 
-double	transform_quantization_variance(int nstages, int xtrabits, int dropped_bits) {
+double	transform_quantization_variance(int nstages, int xtrabits,
+		int dropped_bits) {
+// {{{
 	double	current_variance;
 
 	// Start with any incoming quantization variance, assumed from the
@@ -118,11 +125,14 @@ double	transform_quantization_variance(int nstages, int xtrabits, int dropped_bi
 	if (dropped_bits > 0)
 		current_variance = pow(2,-2*dropped_bits)*current_variance + 1/12.;
 	return current_variance;
+// }}}
 }
 
 void	cordic_angles(FILE *fp, int nstages, int phase_bits, bool mem) {
+// {{{
 	fprintf(fp,
-		"\t//\n"
+		"\t// Cordic angle table\n"
+		"\t// {{{\n"
 		"\t// In many ways, the key to this whole algorithm lies in the angles\n"
 		"\t// necessary to do this.  These angles are also our basic reason for\n"
 		"\t// building this CORDIC in C++: Verilog just can't parameterize this\n"
@@ -186,6 +196,7 @@ void	cordic_angles(FILE *fp, int nstages, int phase_bits, bool mem) {
 		}
 	}
 
+	fprintf(fp, "\t// {{{\n");
 	fprintf(fp, "\t// Std-Dev    : %.2f (Units)\n",
 			phase_variance(nstages, phase_bits));
 	fprintf(fp, "\t// Phase Quantization: %.6f (Radians)\n",
@@ -195,6 +206,8 @@ void	cordic_angles(FILE *fp, int nstages, int phase_bits, bool mem) {
 			(unsigned)(1.0/cordic_gain(nstages)
 					*(4.0 * (1ul<<30))));
 	fprintf(fp, "\t// and right shifting by 32 bits.\n");
+	fprintf(fp, "\t// }}}\n");
+	fprintf(fp, "\t// }}}\n");
 }
 
 int	calc_stages(const int working_width, const int phase_bits) {

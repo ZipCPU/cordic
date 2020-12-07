@@ -1,20 +1,25 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	topolar.h
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	This .h file notes the default parameter values from
 //		within the generated file.  It is used to communicate
 //	information about the design to the bench testing code.
 //
+// This core was generated via a core generator using the following command
+// line:
+//
+//  % (Not given)
+//
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This file is part of the CORDIC related project set.
 //
 // The CORDIC related project set is free software (firmware): you can
@@ -35,7 +40,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #ifndef	TOPOLAR_H
 #define	TOPOLAR_H
 const int	IW = 13;
@@ -46,7 +51,7 @@ const int	PW = 21;
 const int	NSTAGES = 18;
 const double	QUANTIZATION_VARIANCE = 0.1964179315931617; // (Units^2)
 const double	PHASE_VARIANCE_RAD = 0.0000000000669195; // (Radians^2)
-const double	GAIN = 1.1644353455030907;
+const double	GAIN = 0.8233801290585359;
 const bool	HAS_RESET = true;
 const bool	HAS_AUX   = true;
 #define	HAS_RESET_WIRE

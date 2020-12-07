@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	legal.cpp
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	To insert a legal copywrite statement at the top of every file
@@ -11,9 +11,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -35,7 +35,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -46,23 +46,28 @@
 const	char	PROJECT[] = "A series of CORDIC related projects";
 
 void	legal(FILE *fp, const char *fname, const char *project,
-	const char *purpose) {
+	const char *purpose, const char *cmdline) {
 fprintf(fp,
 "////////////////////////////////////////////////////////////////////////////////\n"
 "//\n"
 "// Filename: 	%s\n"
-"//\n"
+"// {{{\n"
 "// Project:	%s\n"
 "//\n"
 "// Purpose:	%s\n"
+"//\n"
+"// This core was generated via a core generator using the following command\n"
+"// line:\n"
+"//\n"
+"//  %% %s\n"
 "//\n"
 "// Creator:	Dan Gisselquist, Ph.D.\n"
 "//		Gisselquist Technology, LLC\n"
 "//\n"
 "////////////////////////////////////////////////////////////////////////////////\n"
-"//\n"
+"// }}}\n"
 "// Copyright (C) 2017-2020, Gisselquist Technology, LLC\n"
-"//\n"
+"// {{{\n"
 "// This file is part of the CORDIC related project set.\n"
 "//\n"
 "// The CORDIC related project set is free software (firmware): you can\n"
@@ -85,7 +90,7 @@ fprintf(fp,
 "//\n"
 "////////////////////////////////////////////////////////////////////////////////\n"
 "//\n"
-"//\n", fname, project, purpose);
+"// }}}\n", fname, project, purpose, (cmdline) ? cmdline : "(Not given)");
 }
 
 char *modulename(const char *fname) {
