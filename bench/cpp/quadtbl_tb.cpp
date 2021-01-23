@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename:	quadtbl_tb.cpp
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	A quick test bench to determine if the sine wave generator
@@ -11,9 +11,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2017-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -28,14 +28,15 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 
 #include <verilated.h>
@@ -52,7 +53,8 @@
 class	QUADTBL_TB : public TESTB<Vquadtbl> {
 	bool		m_debug;
 public:
-
+	// QUADTBL_TB() constructor
+	// {{{
 	QUADTBL_TB(void) {
 		m_debug = true;
 		m_core->i_ce    = 1;
@@ -67,6 +69,7 @@ public:
 		tick();
 #endif
 	}
+	// }}}
 };
 
 const long	LGNSAMPLES=(PW>26)?26:PW;
@@ -88,7 +91,8 @@ int main(int  argc, char **argv) {
 	// tb->opentrace("quadtbl_tb.vcd");
 	tb->reset();
 
-
+	// Main simulation loop
+	// {{{
 	idx = 0;
 	for(long i=0; i<NSAMPLES; i++) {
 		shift = (PW-LGNSAMPLES);
@@ -115,7 +119,10 @@ int main(int  argc, char **argv) {
 			idx++;
 		}
 	}
+	// }}}
 
+	// Flush any last data from the core
+	// {{{
 	tb->m_core->i_aux = 0;
 	shift = (8*sizeof(sdata[0])-OW);
 	while(tb->m_core->o_aux) {
@@ -130,7 +137,10 @@ int main(int  argc, char **argv) {
 			assert(idx <= NSAMPLES);
 		}
 	}
+	// }}}
 
+	// Computer and write out some debugging outputs
+	// {{{
 	FILE	*fdbg = fopen("quadtbl.32t","w");
 
 	double	mxerr = 0.0;
@@ -158,17 +168,22 @@ int main(int  argc, char **argv) {
 		else if (sdata[i] < imnv)
 			imnv = sdata[i];
 	} fclose(fdbg);
+	// }}}
 
+	// Report on the results
+	// {{{
 	printf("MXERR: %f (Expected %f)\n", mxerr, TBL_ERR);
 	if (fabs(mxerr) > fabs(TBL_ERR) + 2.)
 		failed = true;
 	printf("MXVAL: 0x%08x\n", imxv);
 	printf("MNVAL: 0x%08x\n", imnv);
+	// }}}
 
 	if (failed)
 		goto test_failed;
 
 	// Estimate the spurious free dynamic range
+	// {{{
 	if ((PW < 26)&&(NSAMPLES == (1ul << PW))) {
 		typedef	std::complex<double>	COMPLEX;
 		COMPLEX	*outpt;
@@ -201,6 +216,7 @@ int main(int  argc, char **argv) {
 			10*log(master / spur)/log(10.));
 	} else if (PW >= 26)
 		printf("Too many phase bits ... skipping SFDR calculation\n");
+	// }}}
 
 	printf("SUCCESS!!\n");
 	exit(EXIT_SUCCESS);

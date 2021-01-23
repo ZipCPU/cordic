@@ -19,7 +19,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2020, Gisselquist Technology, LLC
+// Copyright (C) 2017-2021, Gisselquist Technology, LLC
 // {{{
 // This file is part of the CORDIC related project set.
 //

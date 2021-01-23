@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2020, Gisselquist Technology, LLC
+// Copyright (C) 2017-2021, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -91,7 +91,7 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
 		"\tlocalparam\tIW=%2d,\t// The number of bits in our inputs\n"
 		"\t\t\tOW=%2d,\t// The number of output bits to produce\n"
 		"\t\t\tNSTAGES=%2d,\n"
-		"\t\t\tXTRA=%2d,// Extra bits for internal precision\n"
+		"\t\t\t// XTRA=%2d,// Extra bits for internal precision\n"
 		"\t\t\tWW=%2d,\t// Our working bit-width\n"
 		"\t\t\tPW=%2d\t// Bits in our phase variables\n"
 		"\t\t// }}}\n"

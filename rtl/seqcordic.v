@@ -23,7 +23,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2020, Gisselquist Technology, LLC
+// Copyright (C) 2017-2021, Gisselquist Technology, LLC
 // {{{
 // This file is part of the CORDIC related project set.
 //
@@ -54,8 +54,8 @@ module	seqcordic #(
 		// so they can't really be changed here.
 		localparam	IW=13,	// The number of bits in our inputs
 				OW=13,	// The number of output bits to produce
-				NSTAGES=16,
-				XTRA= 3,// Extra bits for internal precision
+				// NSTAGES=16,
+				// XTRA= 3,// Extra bits for internal precision
 				WW=16,	// Our working bit-width
 				PW=20	// Bits in our phase variables
 		// }}}
@@ -329,8 +329,8 @@ module	seqcordic #(
 	// Make Verilator happy with pre_.val
 	// {{{
 	// verilator lint_off UNUSED
-	wire	[(2*WW-2*OW-1):0] unused_val;
-	assign	unused_val = { final_xv[WW-OW-1:0], final_yv[WW-OW-1:0] };
+	wire	unused_val;
+	assign	unused_val = &{ 1'b0,  final_xv[WW-OW-1:0], final_yv[WW-OW-1:0] };
 	// verilator lint_on UNUSED
 	// }}}
 endmodule

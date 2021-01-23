@@ -1,7 +1,7 @@
 ################################################################################
 ##
 ## Filename:	rtl/Makefile
-##
+## {{{
 ## Project:	A series of CORDIC related projects
 ##
 ## Purpose:	To direct the Verilator build of the CORDIC demo sources.  The
@@ -15,9 +15,9 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
-## Copyright (C) 2017-2020, Gisselquist Technology, LLC
-##
+## }}}
+## Copyright (C) 2017-2021, Gisselquist Technology, LLC
+## {{{
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or (at
@@ -32,18 +32,21 @@
 ## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 ## target there if the PDF file isn't present.)  If not, see
 ## <http://www.gnu.org/licenses/> for a copy.
-##
+## }}}
 ## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
 ################################################################################
 ##
-##
+## }}}
 all:	test
 FBDIR := .
 VDIRFB:= $(FBDIR)/obj_dir
 
 .PHONY: test topolar cordic sintable quarterwav quadtbl
+## Target pseudonymns
+## {{{
 test: topolar cordic sintable quarterwav quadtbl seqcordic seqpolar
 topolar:    $(VDIRFB)/Vtopolar__ALL.a
 cordic:     $(VDIRFB)/Vcordic__ALL.a
@@ -52,6 +55,8 @@ quarterwav: $(VDIRFB)/Vquarterwav__ALL.a
 quadtbl:    $(VDIRFB)/Vquadtbl__ALL.a
 seqcordic:  $(VDIRFB)/Vseqcordic__ALL.a
 seqpolar:   $(VDIRFB)/Vseqpolar__ALL.a
+## }}}
+
 VOBJ := obj_dir
 SUBMAKE := $(MAKE) --no-print-directory --directory=$(VOBJ) -f
 ifeq ($(VERILATOR_ROOT),)
@@ -61,6 +66,8 @@ VERILATOR := $(VERILATOR_ROOT)/bin/verilator
 endif
 VFLAGS := -Wall -MMD --trace -cc
 
+## Dependencies
+## {{{
 $(VDIRFB)/Vcordic__ALL.a: $(VDIRFB)/Vcordic.h $(VDIRFB)/Vcordic.cpp
 $(VDIRFB)/Vcordic__ALL.a: $(VDIRFB)/Vcordic.mk
 $(VDIRFB)/Vcordic.h $(VDIRFB)/Vcordic.cpp $(VDIRFB)/Vcordic.mk: cordic.v
@@ -88,17 +95,28 @@ $(VDIRFB)/Vseqcordic.h $(VDIRFB)/Vseqcordic.cpp $(VDIRFB)/Vseqcordic.mk: seqcord
 $(VDIRFB)/Vseqpolar__ALL.a: $(VDIRFB)/Vseqpolar.h $(VDIRFB)/Vseqpolar.cpp
 $(VDIRFB)/Vseqpolar__ALL.a: $(VDIRFB)/Vseqpolar.mk
 $(VDIRFB)/Vseqpolar.h $(VDIRFB)/Vseqpolar.cpp $(VDIRFB)/Vseqpolar.mk: seqpolar.v
+## }}}
 
+## Verilate
+## {{{
 $(VDIRFB)/V%.cpp $(VDIRFB)/V%.h $(VDIRFB)/V%.mk: $(FBDIR)/%.v
 	$(VERILATOR) $(VFLAGS) $*.v
+## }}}
 
+## Build the library
+## {{{
 $(VDIRFB)/V%__ALL.a: $(VDIRFB)/V%.mk
 	$(SUBMAKE) V$*.mk
+## }}}
 
 .PHONY: clean
+## {{{
 clean:
 	rm -rf $(VDIRFB)/
+## }}}
 
+## Automatic dependency handling
+## {{{
 #
 # Note Verilator's dependency created information, and include it here if we
 # can
@@ -109,3 +127,4 @@ ifneq ($(DEPS),)
 include $(DEPS)
 endif
 endif
+## }}}

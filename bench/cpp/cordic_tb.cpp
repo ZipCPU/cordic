@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename:	cordic_tb.cpp
-//
+// {{{
 // Project:	A series of CORDIC related projects
 //
 // Purpose:	A quick test bench to determine if the basic cordic module
@@ -11,9 +11,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2017-2020, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2017-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -35,7 +35,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 
 #include <verilated.h>
@@ -55,7 +55,8 @@
 class	CORDIC_TB : public TESTB<BASECLASS> {
 	bool		m_debug;
 public:
-
+	// CORDIC_TB constructor
+	// {{{
 	CORDIC_TB(void) {
 		m_debug = true;
 #ifdef	CLOCKS_PER_OUTPUT
@@ -76,6 +77,7 @@ public:
 		tick();
 #endif
 	}
+	// }}}
 };
 
 const int	LGNSAMPLES=PW;
@@ -97,17 +99,29 @@ int main(int  argc, char **argv) {
 	// This only works on DUT's with the aux flag turned on.
 	assert(HAS_AUX);
 
+	// Open a trace
+	// {{{
 #ifdef	CLOCKS_PER_OUTPUT
 	tb->opentrace("seqcordic_tb.vcd");
 #else
 	tb->opentrace("cordic_tb.vcd");
 #endif
-	tb->reset();
+	// }}}
 
+	// Reset the design
+	// {{{
+	tb->reset();
+	// }}}
+
+	// scale
+	// {{{
 	scale  = tb->m_core->i_xval * (double)tb->m_core->i_xval;
 	scale += tb->m_core->i_yval * (double)tb->m_core->i_yval;
 	scale  = sqrt(scale);
+	// }}}
 
+	// Simulation loop for NSAMPLES time steps
+	// {{{
 	idx = 0;
 	for(int i=0; i<NSAMPLES; i++) {
 		int	shift = (PW-LGNSAMPLES);
@@ -126,7 +140,11 @@ int main(int  argc, char **argv) {
 		iyval[i] = tb->m_core->i_yval;
 		tb->m_core->i_aux   = 1;
 
+		// Step the clock
+		// {{{
 #ifdef	CLOCKS_PER_OUTPUT
+		// Step by CLOCKS_PER_OUTPUT clock ticks
+		// {{{
 		tb->m_core->i_stb = 1;
 		for(int j=0; j<CLOCKS_PER_OUTPUT-1; j++) {
 			tb->tick();
@@ -137,10 +155,14 @@ int main(int  argc, char **argv) {
 		tb->tick();
 		assert(tb->m_core->o_done);
 		assert(tb->m_core->o_aux);
+		// }}}
 #else
 		tb->tick();
 #endif
+		// }}}
 
+		// Copy the results to an array for later analysis
+		// {{{
 		if (tb->m_core->o_aux) {
 			shift = (8*sizeof(int)-OW);
 			// Make our values signed..
@@ -151,8 +173,12 @@ int main(int  argc, char **argv) {
 			// printf("%08x<<%d: %08x %08x\n", (unsigned)pdata[i], shift, xval[idx], yval[idx]);
 			idx++;
 		}
+		// }}}
 	}
+	// }}}
 
+	// Flush any final data through the system
+	// {{{
 #ifndef	CLOCKS_PER_OUTPUT
 	tb->m_core->i_aux = 0;
 	while(tb->m_core->o_aux) {
@@ -171,8 +197,10 @@ int main(int  argc, char **argv) {
 		}
 	}
 #endif
+	// }}}
 
-	if (false) {
+	if (false) { // Dump data for offline analysis
+		// {{{
 		FILE *fdbg = fopen("cordicdbg.dbl","w");
 		for(int k=0; k<NSAMPLES; k++) {
 			int	wv[5];
@@ -185,7 +213,10 @@ int main(int  argc, char **argv) {
 		}
 		fclose(fdbg);
 	}
+	// }}}
 
+	// Determine if we were "close" enough: maximum error and average error
+	// {{{
 	double	mxerr = 0.0, averr = 0.0, mag = 0, imag=0, sumxy = 0.0,
 		sumsq = 0.0, sumd = 0.0;
 	for(int i=0; i<NSAMPLES; i++) {
@@ -245,6 +276,7 @@ int main(int  argc, char **argv) {
 		if (err > mxerr)
 			mxerr = err;
 	}
+	// }}}
 
 	bool	failed = false;
 	double	expected_err;
@@ -252,6 +284,9 @@ int main(int  argc, char **argv) {
 	expected_err = QUANTIZATION_VARIANCE
 			+ PHASE_VARIANCE_RAD*scale*scale*GAIN*GAIN;
 
+	// Scale the error to a per-sample error
+	// {{{
+	// Error _magnitude_ should *never* be negative--a simple internal check
 	averr /= (NSAMPLES);
 	averr  = sqrt(averr);
 	if (mag <= 0) {
@@ -266,8 +301,12 @@ int main(int  argc, char **argv) {
 	}
 	imag  /= (NSAMPLES);
 	imag   = sqrt(imag);
+	// }}}
 
-	// What average error do we expect?
+	// What average error do we expect?  and did we pass?
+
+	// Report on the results
+	// {{{
 	// int_-1/2^1/2 x^2 dx
 	// = x^3/3 |_-1/2^1/2
 	// = 1/24 + 1/24 = 1/12
@@ -295,8 +334,10 @@ int main(int  argc, char **argv) {
 		goto test_failed;
 	} if (failed)
 		goto test_failed;
+	// }}}
 
-	// Estimate the spurious free dynamic range
+	// Estimate and check the spurious free dynamic range
+	// {{{
 	if ((PW < 26)&&(NSAMPLES == (1ul << PW))) {
 		typedef	std::complex<double>	COMPLEX;
 		COMPLEX	*outpt;
@@ -329,6 +370,7 @@ int main(int  argc, char **argv) {
 			10*log(master / spur)/log(10.));
 	} else if (PW >= 26)
 		printf("Too many phase bits ... skipping SFDR calculation\n");
+	// }}}
 
 	printf("SUCCESS!!\n");
 	exit(EXIT_SUCCESS);

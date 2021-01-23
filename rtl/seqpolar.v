@@ -25,7 +25,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2020, Gisselquist Technology, LLC
+// Copyright (C) 2017-2021, Gisselquist Technology, LLC
 // {{{
 // This file is part of the CORDIC related project set.
 //
@@ -54,8 +54,8 @@ module	seqpolar #(
 		// {{{
 		localparam	IW=13,	// The number of bits in our inputs
 				OW=13,// The number of output bits to produce
-				NSTAGES=18,
-				XTRA= 4,// Extra bits for internal precision
+				// NSTAGES=18,
+				// XTRA= 4,// Extra bits for internal precision
 				WW=21,	// Our working bit-width
 				PW=21	// Bits in our phase variables
 		// }}}
@@ -312,7 +312,7 @@ module	seqpolar #(
 	// Make Verilator happy with pre_.val
 	// {{{
 	// verilator lint_off UNUSED
-	wire	 unused_val;
+	wire	unused_val;
 	assign	unused_val = &{ 1'b0,  final_mag[WW-1],
 			final_mag[(WW-OW-1):0] };
 	// verilator lint_on UNUSED

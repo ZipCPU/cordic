@@ -20,7 +20,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2020, Gisselquist Technology, LLC
+// Copyright (C) 2017-2021, Gisselquist Technology, LLC
 // {{{
 // This file is part of the CORDIC related project set.
 //
@@ -49,7 +49,7 @@ module	cordic#(
 	localparam	IW=13,	// The number of bits in our inputs
 			OW=13,	// The number of output bits to produce
 			NSTAGES=16,
-			XTRA= 3,// Extra bits for internal precision
+			// XTRA= 3,// Extra bits for internal precision
 			WW=16,	// Our working bit-width
 			PW=20	// Bits in our phase variables
 		// }}}
@@ -316,8 +316,8 @@ module	cordic#(
 	// Make Verilator happy with pre_.val
 	// {{{
 	// verilator lint_off UNUSED
-	wire	[(2*(WW-OW)-1):0] unused_val;
-	assign	unused_val = {
+	wire	unused_val;
+	assign	unused_val = &{ 1'b0, 
 		pre_xval[(WW-OW-1):0],
 		pre_yval[(WW-OW-1):0]
 		};
