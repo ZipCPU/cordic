@@ -118,7 +118,7 @@ module	quadtbl #(
 
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Clock 1
+	// Clock 1 - Table coefficient lookups
 	// {{{
 	//	1. Operate on the incoming bits--this is the only stage
 	//	   that does so
@@ -157,7 +157,7 @@ module	quadtbl #(
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Clock 2
+	// Clock 2 - Multiply by the quadratic coefficient
 	// {{{
 	//	1. Multiply to get the quadratic component of our design
 	//		This is the first of two multiplies used by this
@@ -187,7 +187,7 @@ module	quadtbl #(
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Clock 3
+	// Clock 3 - Add the result to the linear component
 	// {{{
 	//	1. Select the number of bits we want from the output
 	//	2. Add our linear term to the result of the multiply
@@ -219,7 +219,7 @@ module	quadtbl #(
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Clock 4
+	// Clock 4 - Last multiply, w/ the linear coefficient
 	// {{{
 	//	1. Our second and final multiply
 	//	2. Copy the constant coefficient value to the next clock
@@ -240,7 +240,7 @@ module	quadtbl #(
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Clock 5
+	// Clock 5 - Add in the constant
 	// {{{
 	//	1. Add the constant value to the result of the last
 	//	   multiplication.  This will be the output of our algorithm
@@ -259,7 +259,7 @@ module	quadtbl #(
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Clock 6
+	// Clock 6 - Round the output
 	// {{{
 	//	1. The last and final step is to round the output to the
 	//	   nearest value.  This also involves dropping the extra bits

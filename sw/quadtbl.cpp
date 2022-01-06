@@ -466,7 +466,7 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
 	fprintf(fp,
 	"\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t// Clock 1\n"
+	"\t// Clock 1 - Table coefficient lookups\n"
 	"\t// {{{\n"
 	"\t//	1. Operate on the incoming bits--this is the only stage\n"
 	"\t//	   that does so\n"
@@ -530,7 +530,7 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
 	"\t// }}}\n"
 	"\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t// Clock 2\n"
+	"\t// Clock 2 - Multiply by the quadratic coefficient\n"
 	"\t// {{{\n"
 	"\t//	1. Multiply to get the quadratic component of our design\n"
 	"\t//		This is the first of two multiplies used by this\n"
@@ -573,7 +573,7 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
 		"\t// }}}\n"
 		"\t////////////////////////////////////////////////////////////////////////\n"
 		"\t//\n"
-		"\t// Clock 3\n"
+		"\t// Clock 3 - Add the result to the linear component\n"
 		"\t// {{{\n"
 		"\t//	1. Select the number of bits we want from the output\n"
 		"\t//	2. Add our linear term to the result of the multiply\n"
@@ -622,13 +622,14 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
 	"\t// }}}\n"
 	"\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t// Clock %d\n"
+	"\t// Clock %d%s\n"
 	"\t// {{{\n"
 	"\t//	1. Our %s multiply\n"
 	"\t//	2. Copy the constant coefficient value to the next clock\n"
 	"\t//\n"
 	"\t//\n",
 		(NO_QUADRATIC_COMPONENT) ? 2 : 4,
+		(NO_QUADRATIC_COMPONENT) ? "":" - Last multiply, w/ the linear coefficient",
 		(NO_QUADRATIC_COMPONENT) ? "only" : "second and final");
 
 	fprintf(fp,
@@ -659,7 +660,7 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
 	"\t// }}}\n"
 	"\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t// Clock %d\n"
+	"\t// Clock %d - Add in the constant\n"
 	"\t// {{{\n"
 	"\t//	1. Add the constant value to the result of the last\n"
 	"\t//	   multiplication.  This will be the output of our algorithm\n"
@@ -698,7 +699,7 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
 	"\t// }}}\n"
 	"\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t// Clock %d\n"
+	"\t// Clock %d - Round the output\n"
 	"\t// {{{\n"
 	"\t//	1. The last and final step is to round the output to the\n"
 	"\t//	   nearest value.  This also involves dropping the extra bits\n"
