@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2022, Gisselquist Technology, LLC
+// Copyright (C) 2017-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -414,7 +414,7 @@ void	basiccordic(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
 			"\t\to_yval = 0;\n");
 		if (with_aux)
 			fprintf(fp, "\t\to_aux  = 0;\n");
-		fprintf(fp, "\tend\n");
+		fprintf(fp, "\tend\n\t// }}}");
 		fprintf(fp, "%s", always_reset.c_str());
 
 		if (with_reset) {

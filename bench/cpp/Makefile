@@ -42,7 +42,7 @@
 ##
 ################################################################################
 ## }}}
-## Copyright (C) 2017-2022, Gisselquist Technology, LLC
+## Copyright (C) 2017-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published
@@ -76,31 +76,31 @@ VERILATOR := verilator
 VERILATOR_ROOT ?= $(shell bash -c '$(VERILATOR) -V|grep VERILATOR_ROOT| head -1|sed -e " s/^.*=\s*//"')
 VROOT:= $(VERILATOR_ROOT)
 INCS   := -I$(VROOT)/include -I$(RTLD) -I$(ROBJD)
-VSRCS  := $(VROOT)/include/verilated.cpp $(VROOT)/include/verilated_vcd_c.cpp
+VSRCS  := $(VROOT)/include/verilated.cpp $(VROOT)/include/verilated_vcd_c.cpp $(VROOT)/include/verilated_threads.cpp
 TBOBJ  := $(ROBJD)/Vcordic__ALL.a
 STBOBJ := $(ROBJD)/Vseqcordic__ALL.a
 PLOBJ  := $(ROBJD)/Vtopolar__ALL.a
 SPLOBJ := $(ROBJD)/Vseqpolar__ALL.a
 QTOBJ  := $(ROBJD)/Vquadtbl__ALL.a
-CFLAGS := -g -Og -Wall $(INCS) # -faligned-new
+CFLAGS := -faligned-new -g -Og -Wall $(INCS) # -faligned-new
 ## }}}
 
 ## Build the various test benches
 ## {{{
 cordic_tb:	cordic_tb.cpp $(TBOBJ) $(ROBJD)/Vcordic.h testb.h fft.h fftw.c
-	$(CXX) $(CFLAGS) cordic_tb.cpp fftw.c $(VSRCS) $(TBOBJ) -lfftw3 -o $@
+	$(CXX) $(CFLAGS) cordic_tb.cpp fftw.c $(VSRCS) $(TBOBJ) -lfftw3 -lpthread -o $@
 
 seqcordic_tb:	cordic_tb.cpp $(STBOBJ) $(ROBJD)/Vseqcordic.h testb.h fft.h fftw.c
-	$(CXX) $(CFLAGS) -D CLOCKS_PER_OUTPUT cordic_tb.cpp fftw.c $(VSRCS) $(STBOBJ) -lfftw3 -o $@
+	$(CXX) $(CFLAGS) -D CLOCKS_PER_OUTPUT cordic_tb.cpp fftw.c $(VSRCS) $(STBOBJ) -lfftw3 -lpthread -o $@
 
 topolar_tb:	topolar_tb.cpp $(PLOBJ) $(ROBJD)/Vtopolar.h testb.h
-	$(CXX) $(CFLAGS) topolar_tb.cpp $(VSRCS) $(PLOBJ) -o $@
+	$(CXX) $(CFLAGS) topolar_tb.cpp $(VSRCS) $(PLOBJ) -lpthread -o $@
 
 seqpolar_tb:	topolar_tb.cpp $(SPLOBJ) $(ROBJD)/Vseqpolar.h testb.h
-	$(CXX) $(CFLAGS) -DCLOCKS_PER_OUTPUT topolar_tb.cpp $(VSRCS) $(SPLOBJ) -o $@
+	$(CXX) $(CFLAGS) -DCLOCKS_PER_OUTPUT topolar_tb.cpp $(VSRCS) $(SPLOBJ) -lpthread -o $@
 
 quadtbl_tb:	quadtbl_tb.cpp $(PLOBJ) $(ROBJD)/Vquadtbl.h testb.h fft.h fftw.c
-	$(CXX) $(CFLAGS) quadtbl_tb.cpp fftw.c $(VSRCS) $(QTOBJ) -lfftw3 -o $@
+	$(CXX) $(CFLAGS) quadtbl_tb.cpp fftw.c $(VSRCS) $(QTOBJ) -lfftw3 -lpthread -o $@
 ## }}}
 
 ## Test target
