@@ -371,9 +371,11 @@ void	quadtbl(FILE *fp, FILE *fhp, const char *cmdline, const char *fname,
 			"\t\t\tQBITS   = %d,\n"
 			"\t\t\tLBITS   = %d,\n"
 			"\t\t\tCBITS   = %d,\n"
-			"\t\t\tWW      = (OW+XTRA), // Working width\n"
-			"\t\t\tNSTAGES = %d; // Hard-coded to the algorithm\n\n",
-			lgtbl, dxbits, (1<<lgtbl), qbits, lbits, cbits,
+			"\t\t\tWW      = (OW+XTRA); // Working width\n",
+			lgtbl, dxbits, (1<<lgtbl), qbits, lbits, cbits);
+
+	if (with_aux) fprintf(fp,
+	"\tlocalparam\tNSTAGES = %d; // Hard-coded to the algorithm\n\n",
 			(NO_QUADRATIC_COMPONENT)?4:6);
 
 

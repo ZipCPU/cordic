@@ -68,8 +68,8 @@ module	quadtbl #(
 			QBITS   = 9,
 			LBITS   = 13,
 			CBITS   = 16,
-			WW      = (OW+XTRA), // Working width
-			NSTAGES = 6; // Hard-coded to the algorithm
+			WW      = (OW+XTRA); // Working width
+	localparam	NSTAGES = 6; // Hard-coded to the algorithm
 
 	//
 	// Space for our coefficients, and their copies as we work through
