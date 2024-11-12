@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	topolar_tb.cpp
+// Filename:	bench/cpp/topolar_tb.cpp
 // {{{
 // Project:	A series of CORDIC related projects
 //

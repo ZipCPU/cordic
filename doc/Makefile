@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	Makefile
+## Filename:	doc/Makefile
 ## {{{
 ## Project:	A series of CORDIC related projects
 ##
@@ -38,6 +38,7 @@
 ## License:	GPL, v3, as defined and found on www.gnu.org,
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
+##
 ##
 ################################################################################
 ##

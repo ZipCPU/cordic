@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	quadtbl_tb.cpp
+// Filename:	bench/cpp/quadtbl_tb.cpp
 // {{{
 // Project:	A series of CORDIC related projects
 //
